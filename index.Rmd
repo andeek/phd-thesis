@@ -1,26 +1,27 @@
 ---
-title: "Thesis title (not title case)"
-author: Your name
+title: "On advancing MCMC-based methods for Markovian data structures with applications to deep learning, simulation, and resampling"
+author: Andrea Kaplan
 site: bookdown::bookdown_site
-output: bookdown::pdf_book
+output: 
+  bookdown::pdf_book:
+    includes:
+      in_header: resources/header.tex
 documentclass: isuthesis
 fontsize: 11pt
-bibliography: [resources/refs_1.bib, resources/refs_2.bib]
+bibliography: [resources/refs.bib]
 biblio-style: apa
-url: 'http://your.website.com/thesis-repo-name'
-github-repo: username/thesis-repo-name
+github-repo: andeek/phd-thesis
 dedicate: true
 degree: DOCTOR OF PHILOSOPHY
 level: doctoral
 formal: dissertation
 major: Statistics
-mprof:
-  - Your Major Prof
+mprof: "Daniel Nordman"
 member:
-  - Committee Member
-  - Committee Member
-  - Committee Member
-  - Committee Member
+  - Stephen Vardeman, Major Professor
+  - Kris De Brabanter
+  - Mark Kaiser
+  - Daniel Nettleton
 abstract: |
   This is your abstract.
 ---
@@ -28,15 +29,23 @@ abstract: |
 ```{r setup, include=FALSE}
 options(
   dplyr.print_min = 6, dplyr.print_max = 6, width = 70,
-  digits = 3, htmltools.dir.version = FALSE
+  digits = 3
 )
 knitr::opts_chunk$set(
   comment = "#>",
-  collapse = TRUE,
   warning = FALSE,
   message = FALSE,
-  cache = TRUE
+  cache = TRUE,
+  echo = FALSE
 )
+
+ggplot2::theme_set(ggplot2::theme_bw(base_family="serif"))
+
+library(knitr)
+library(ggplot2)
+library(dplyr)
+library(tidyr)
+
 ```
 
 
