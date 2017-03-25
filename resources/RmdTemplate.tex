@@ -398,10 +398,17 @@ $if(bibliography)$
 \addcontentsline{toc}{chapter}{BIBLIOGRAPHY}
 \bibliography{$for(bibliography)$$bibliography$$sep$,$endfor$}
 $endif$
-$endif$
+$else$
 $if(biblatex)$
 \printbibliography$if(biblio-title)$[title=$biblio-title$]$endif$
+$else$
+\specialchapt{BIBLIOGRAPHY}
 
+% redefine hypertarget command to add a line break after the target
+% needed to avoid overfull vbox (which leads to incorrect page breaking)
+\let\oldhypertarget\hypertarget
+\renewcommand{\hypertarget}[2]{\oldhypertarget{#1}{#2}~\\[0in]}
+$endif$
 $endif$
 
 $for(include-after)$
