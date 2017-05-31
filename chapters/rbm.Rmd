@@ -1,7 +1,7 @@
 # ON THE PROPRIETY OF RESTRICTED BOLTZMANN MACHINES
 
 ```{block, type='paperinfo_', echo=TRUE}
-Submitted to *Technometrics*
+to be submitted to the *Journal of the American Statistical Association*
 ```
 
 ```{block, type='paperauthor_', echo=TRUE}
@@ -946,6 +946,5 @@ RBM models constitute an interesting class of undirected graphical models that a
 In this paper, we have presented three honest Bayes MCMC-based methods for fitting RBMs. Common practice is to use a kind of MCMC to overcome fitting complexities. However because of the size of the space to be filled with MCMC iterates, convergence and mixing of these methods will be slow. Marginalization over the latent variables in the model can improve mixing, but is numerically intractable due to the necessity of repeated calculation of the normalizing constant.
 
 Ultimately, it is not clear that RBM models are useful as generative models. Due to the extreme flexibility in this model class, rigorous likelihood-based fitting for a RBM will typically merely return the (discrete) empirical distribution for visibles. Even if a rigorous likelihood-based fitting method is practically possible, we know what it will produce for fitted probabilities before we even begin. For these reasons, we are skeptical of the claims made about RBMs as generative tools.
-
 
 

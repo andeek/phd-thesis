@@ -3,8 +3,10 @@ repo: https://github.com/andeek/phd-thesis
 output_dir: docs
 rmd_files: [
   "index.Rmd",
-  "chapters/01_rbm.Rmd",
-  "chapters/02_instab.Rmd",
-  "appendices/01_appendix-center.Rmd",
-  "appendices/02_appendix-note.Rmd"
+  "chapters/introduction.Rmd",
+  "chapters/rbm.Rmd",
+  "chapters/instab.Rmd",
+  "appendices/appendix-center.Rmd",
+  "appendices/appendix-note.Rmd",
+  "chapters/references.Rmd"
 ]

@@ -3,7 +3,7 @@
 # A NOTE ON THE INSTABILITY AND DEGENERACY OF DEEP LEARNING MODELS
 
 ```{block, type='paperinfo_', echo=TRUE}
-Submitted to *Technometrics*
+to be submitted to the *Journal of the American Statistical Association*
 ```
 
 ```{block, type='paperauthor_', echo=TRUE}

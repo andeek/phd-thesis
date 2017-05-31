@@ -8,7 +8,7 @@ output:
       in_header: resources/header.tex
 documentclass: isuthesis
 fontsize: 11pt
-bibliography: [resources/refs.bib]
+bibliography: [resources/refs_rbm.bib]
 biblio-style: apa
 github-repo: andeek/phd-thesis
 dedicate: true
@@ -47,17 +47,3 @@ library(dplyr)
 library(tidyr)
 
 ```
-
-
-# PROBLEM STATEMENT
-
-State the problem.
-
-# OVERVIEW
-
-## Background info
-
-1. You
-2. can
-3. use
-4. lists

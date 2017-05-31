@@ -256,6 +256,10 @@ $if(dir)$
 \fi
 $endif$
 
+% stuff from eric
+\hypersetup{colorlinks=true,linkcolor=blue,anchorcolor=blue,citecolor=blue,filecolor=blue,urlcolor=blue,bookmarksnumbered=true,pdfview=FitB}
+\newgeometry{letterpaper, left=1.25in, top=0.55in, right=1.02in, bottom=1in, includehead=true}
+
 %%% Use protect on footnotes to avoid problems with footnotes in titles
 \let\rmarkdownfootnote\footnote%
 \def\footnote{\protect\rmarkdownfootnote}
@@ -389,20 +393,21 @@ $endif$
 
 $body$
 
-$if(natbib)$
-$if(bibliography)$
-\renewcommand\bibname{\centerline{BIBLIOGRAPHY}}
-\unappendixtitle
-\newpage
-\phantomsection
-\addcontentsline{toc}{chapter}{BIBLIOGRAPHY}
-\bibliography{$for(bibliography)$$bibliography$$sep$,$endfor$}
-$endif$
-$else$
-$if(biblatex)$
-\printbibliography$if(biblio-title)$[title=$biblio-title$]$endif$
-$else$
-\specialchapt{BIBLIOGRAPHY}
+% For some reason this is broken
+% $if(natbib)$
+% $if(bibliography)$
+% \renewcommand\bibname{\centerline{BIBLIOGRAPHY}}
+% \unappendixtitle
+% \newpage
+% \phantomsection
+% \addcontentsline{toc}{chapter}{BIBLIOGRAPHY}
+% \bibliography{$for(bibliography)$$bibliography$$sep$,$endfor$}
+% $endif$
+% $else$
+% $if(biblatex)$
+% \printbibliography$if(biblio-title)$[title=$biblio-title$]$endif$
+% $else$
+
 
 % redefine hypertarget command to add a line break after the target
 % needed to avoid overfull vbox (which leads to incorrect page breaking)
