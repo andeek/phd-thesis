@@ -1,4 +1,4 @@
-# ON THE PROPRIETY OF RESTRICTED BOLTZMANN MACHINES
+# ON THE PROPRIETY OF RESTRICTED BOLTZMANN MACHINES {#rbm-chapter}
 
 ```{block, type='paperinfo_', echo=TRUE}
 to be submitted to the *Journal of the American Statistical Association*

@@ -6,3 +6,4 @@ data/fitted_models_trunc_marginal_thin.Rdata filter=lfs diff=lfs merge=lfs -text
 data/fitted_models_trunc_thin.Rdata filter=lfs diff=lfs merge=lfs -text
 data/params_theta.Rdata filter=lfs diff=lfs merge=lfs -text
 data/results_grid.RData filter=lfs diff=lfs merge=lfs -text
+data/6_timings.RData filter=lfs diff=lfs merge=lfs -text

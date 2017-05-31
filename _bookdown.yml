@@ -6,6 +6,7 @@ rmd_files: [
   "chapters/introduction.Rmd",
   "chapters/rbm.Rmd",
   "chapters/instab.Rmd",
+  "chapters/package.Rmd",
   "appendices/appendix-center.Rmd",
   "appendices/appendix-note.Rmd",
   "chapters/references.Rmd"
