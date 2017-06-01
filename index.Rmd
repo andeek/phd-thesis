@@ -45,5 +45,9 @@ library(knitr)
 library(ggplot2)
 library(dplyr)
 library(tidyr)
-
+library(scales)
+library(mvtnorm)
+library(rootSolve)
+library(agridat)
+library(xtable)
 ```

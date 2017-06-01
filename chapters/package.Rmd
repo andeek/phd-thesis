@@ -13,12 +13,6 @@ Andee Kaplan, Mark S. Kaiser, Soumendra N. Lahiri, and Daniel Nordman
 For spatial and network data, conditionally specified models can be formulated on the basis of an underlying Markov random field (MRF). This approach often provides an attractive alternative to direct specification of a full joint data distribution, which may be difficult for large correlated data. However, simulation from such MRF models can be challenging, even with relatively small sample sizes. We describe a new and fast way to simulate data from MRF models, where the proposed simulation scheme is computationally fast due to its ability to lower the number of steps necessary to run a single Gibbs iteration. We demonstrate use of a flexible R package (called conclique, to appear on CRAN) that implements the proposed (conclique-based) Gibbs sampler and also performs related goodness-of-fit tests for MRF models.
 
 ```{r, echo=FALSE, message=FALSE}
-library(mvtnorm)
-library(rootSolve)
-library(agridat)
-library(scales)
-library(xtable)
-
 set.seed(1022)
 ```
 
