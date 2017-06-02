@@ -19,3 +19,5 @@ From the lower bound on $P_{\boldsymbol \theta_N}(M_{\epsilon, \boldsymbol \thet
 &= \frac{\epsilon}{N} \log\left[\frac{P_{\boldsymbol \theta_N}(\boldsymbol x_{max})}{P_{\boldsymbol \theta_N}(\boldsymbol x_{min})}\right] - \log |\mathcal{X}| \rightarrow \infty
 \end{align*}
 as $N \rightarrow \infty$ by the definition of an unstable FSFS model (c.f. Definition \ref{defn:instab}). Consequently, $P_{\boldsymbol \theta_N}(M_{\epsilon, \boldsymbol \theta_N}) \rightarrow 1$ as $N \rightarrow \infty$ as claimed. \hfill $\Box$
+
+```

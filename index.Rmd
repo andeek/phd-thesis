@@ -8,7 +8,7 @@ output:
       in_header: resources/header.tex
 documentclass: isuthesis
 fontsize: 11pt
-bibliography: [resources/refs_rbm.bib, resources/refs_package.bib]
+bibliography: [resources/refs_rbm.bib, resources/refs_package.bib, resources/refs_conclique.bib]
 biblio-style: apa
 github-repo: andeek/phd-thesis
 dedicate: true
