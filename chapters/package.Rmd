@@ -10,7 +10,7 @@ Andee Kaplan, Mark S. Kaiser, Soumendra N. Lahiri, and Daniel Nordman
 
 ## Abstract {-}
 
-For spatial and network data, conditionally specified models can be formulated on the basis of an underlying Markov random field (MRF). This approach often provides an attractive alternative to direct specification of a full joint data distribution, which may be difficult for large correlated data. However, simulation from such MRF models can be challenging, even with relatively small sample sizes. We describe a new and fast way to simulate data from MRF models, where the proposed simulation scheme is computationally fast due to its ability to lower the number of steps necessary to run a single Gibbs iteration. We demonstrate use of a flexible R package (called conclique, to appear on CRAN) that implements the proposed (conclique-based) Gibbs sampler and also performs related goodness-of-fit tests for MRF models.
+For spatial and network data, conditionally specified models can be formulated on the basis of an underlying Markov random field (MRF). This approach often provides an attractive alternative to direct specification of a full joint data distribution, which may be difficult for large correlated data. However, simulation from such MRF models can be challenging, even with relatively small sample sizes. We describe a new Gibbs algorithm for simulating data from MRF models, where the proposed simulation scheme is computationally fast due to its ability to lower the number of steps necessary to run a single Gibbs iteration. We demonstrate use of a flexible R package (called conclique, to appear on CRAN) that implements the proposed (conclique-based) Gibbs sampler and also performs related goodness-of-fit tests for MRF models.
 
 ```{r, echo=FALSE, message=FALSE}
 set.seed(1022)
@@ -19,20 +19,20 @@ set.seed(1022)
 
 ## Introduction
 
-Markov random field (MRF) models are common for spatial data (as well as graph, network and other data structures). Rather than specifying a joint distribution directly, a  model is specified through a set of full conditional distributions for the spatials location. The `R` [@r-lang] package `conclique` provides a new, fast way to simulate from a MRF model using a Gibbs sampler and implements a formal goodness-of-fit (GOF) test for model assessment [@kaiser2012goodness].
+Markov random field (MRF) models are common for spatial data (as well as graph, network and other data structures). Rather than specifying a joint distribution directly, a  model is specified through a set of full conditional distributions for the spatial locations. The `R` package `conclique` provides a fast way to simulate from a MRF model using a modified Gibbs sampler and implements a formal goodness-of-fit (GOF) test for model assessment [@kaiser2012goodness].
 
-Throughout this paper, we will employ the following notational conventions: see also @kaiser2000construction for spatial MRF specifications. Spatial locations are denoted $\boldsymbol s_i$ where the set of all locations $\{\boldsymbol s_i: i = 1, \dots, n\}$ form a regular lattice. The values of random variables at these locations will be denoted $\{ Y(\boldsymbol s_i): i=1, \dots, n \}$ and spatial neighborhoods, $\mathcal{N}_i$ will be pre-specified for each location (e.g., four-nearest or eight-nearest neighborhoods). We then denote the neighboring values as $\boldsymbol y(\mathcal{N}_i) = \{ y(\boldsymbol s_j) : \boldsymbol s_j \in \mathcal{N}_i \}$ and define the full conditional distributions for each spatial location as $\{ f_i(y(\boldsymbol s_i)|\boldsymbol y(\mathcal{N}_i), \boldsymbol \theta): i=1, \dots, n \}$, where each $f_i(y(\boldsymbol s_i)|\boldsymbol y(\mathcal{N}_i), \boldsymbol \theta)$ is conditional a pmf/pdf of $Y(\boldsymbol s_i)$ given values for its neighbors $\boldsymbol y(\mathcal{N}_i)$. Lastly, we let $F_i(y(\boldsymbol s_i)|\boldsymbol y(\mathcal{N}_i), \boldsymbol \theta)$ be the conditional cdf of $Y(\boldsymbol s_i)$ given values for its neighbors $\boldsymbol y(\mathcal{N}_i)$ and a potential set $\boldsymbol \theta$ of parameter values. For simplicity, we will assume a common conditional form ($f_i=f$ and $F_i = F$) for all locations, which occurs often in practice. 
+Throughout this paper, we will employ the following notational conventions: see also @kaiser2000construction for spatial MRF specifications. Spatial locations are denoted $\boldsymbol s_i$ where the set of all locations $\{\boldsymbol s_i: i = 1, \dots, n\}$ is assumed to lie on a regular lattice, for simplicity. The values of random variables at these locations will be denoted $\{ Y(\boldsymbol s_i): i=1, \dots, n \}$ and spatial neighborhoods, $\mathcal{N}_i$ will be pre-specified for each location $\boldsymbol s_i$, where the conditional distribution of $Y(\bolsymbol s_i)$ shall depend on observations and locations in $\mathcal{N}_i \subset \{\boldsymbol s_j:j\not=i\}$. We then denote the neighboring values as $\boldsymbol y(\mathcal{N}_i) = \{ y(\boldsymbol s_j) : \boldsymbol s_j \in \mathcal{N}_i \}$ and define the full conditional distributions for each spatial location as $\{ f_i(y(\boldsymbol s_i)|\boldsymbol y(\mathcal{N}_i), \boldsymbol \theta): i=1, \dots, n \}$, where each $f_i(y(\boldsymbol s_i)|\boldsymbol y(\mathcal{N}_i), \boldsymbol \theta)$ is conditional a probability mass or probability density function (pmf/pdf) of $Y(\boldsymbol s_i)$ given values for its neighbors $\boldsymbol y(\mathcal{N}_i)$. Lastly, we let $F_i(y(\boldsymbol s_i)|\boldsymbol y(\mathcal{N}_i), \boldsymbol \theta)$ be the conditional distribution function (cdf) of $Y(\boldsymbol s_i)$ given values for its neighbors $\boldsymbol y(\mathcal{N}_i)$ and a potential set $\boldsymbol \theta$ of parameter values. For simplicity, we will assume a common conditional form ($f_i=f$ and $F_i = F$) for all locations, which occurs often in practice. 
 
-In the following sections, we introduce the `conclique` package through demonstration of simulation from a particular MRF model as well as an associated simulation-based test for assessing GOF of spatial MRF models. Currently `conclique` can be installed via GitHub using the following `R` code.
+In the following sections, we introduce the `conclique` package through demonstration of simulation from a particular MRF model as well as an associated simulation-based test for assessing GOF of spatial MRF models from @kaiser2012goodness. Currently `conclique` can be installed via GitHub using the following `R` code.
 
-```{r, eval=FALSE, echo=TRUE}
+```{r, eval=FALSE}
 devtools::install_github("andeek/conclique")
 ```
 
 
 ## Concliques
 
-*Concliques* are defined as sets of locations such that no location in the set is a neighbor of any other location in the set [@kaiser2012goodness] For example, the singleton sets from all locations provide a trivial set of concliques for any neighborhood structure. We can create a set of maximally sized concliques, $\{\mathcal{C}_i: i = 1, \dots, Q\}$, for a given neighborhood specification (a minimal number of concliques needed to cover or partition the potential observations) using the `conclique` package and assign conclique labels to positions on a grid for easy plotting. Figure \ref{fig:conc} shows an example of concliques for spatial data on a $20\times20$ lattice with a four-nearest neighbor structure, where the four-nearest neighborhood $\mathcal{N}_i$ of a location $\boldsymbol s_i$ is illustrated as
+*Concliques* are defined as sets of locations such that no location in the set is a neighbor of any other location in the set [@kaiser2012goodness] For example, the singleton sets from all locations provide a trivial set of concliques for any neighborhood structure. We seek to create a set of maximally sized concliques, $\{\mathcal{C}_i: i = 1, \dots, Q\}$, for a given neighborhood specification (a minimal number of concliques needed to cover or partition the locations $\{\boldsymbol s_1, \dots, \boldsymbol s_n\}$ of observations) using the `conclique` package and assign conclique labels to positions on a grid for easy plotting. Figure \ref{fig:conc} shows an example of concliques for spatial data on a $20\times20$ lattice with a four-nearest neighbor structure, where the four-nearest neighborhood $\mathcal{N}_i$ of a location $\boldsymbol s_i$ is illustrated as
 $$
 \begin{array}{ccc}
  & * &\\
@@ -40,9 +40,9 @@ $$
 &*&
 \end{array},
 $$
-with $*$'s above as the positions of neighbors. For a four-nearest neighbor model, the set of maximal concliques has $Q = 2$, where Figure \ref{fig:conc} displays the resulting concliques for the $20\times 20$ example. For comparison, an eight-nearest neighbor model will yield a set of maximal concliques containing $Q = 4$ concliques.
+with $*$'s above as the positions of neighbors. For a four-nearest neighbor model, the set of maximal concliques has $Q = 2$, as indicated in Figure \ref{fig:conc}. For comparison, an eight-nearest neighbor model will yield a set of maximal concliques containing $Q = 4$ concliques.
 
-```{r concliques, eval=FALSE, echo=TRUE}
+```{r concliques, eval=FALSE}
 library(conclique)
 
 N <- 20
@@ -74,7 +74,7 @@ lattice <- lattice_4nn_torus(dimvec = c(N, N))
 grid <- assign_concliques(grid = grid, conclique_cover = concliques)
 ```
 
-```{r conc-plots, echo=FALSE, fig.cap="\\label{fig:conc}Minimal conclique cover for a given lattice of size $20\\times20$ using a four-nearest neighbors structure wrapped on a torus. This results in 2 concliques.", fig.width=3, echo=FALSE}
+```{r conc-plots, echo=FALSE, fig.width=3, echo=FALSE, fig.show='hold', out.width='49%', fig.cap='\\label{fig:conc}Minimal conclique cover for a given lattice of size $20\\times20$ using a four-nearest neighbors structure wrapped on a torus. This results in 2 concliques.'}
 theme_blank <- function() {
   theme <- theme_bw()
   theme$line <- element_blank()
@@ -96,31 +96,31 @@ expand.grid(x = 1:N, y = 1:N) %>%
   theme(aspect.ratio = 1)
 ```
 
-The `conclique` package comes with the convenience functions `lattice_4nn_torus`, `min_conclique_cover`, and `assign_concliques`, which create a four-nearest neighbor lattice structure of a given dimension (in this case, $20\times20$), generate a minimal conclique cover, and assign the conclique labels to a grid, respectively. With these helper functions, one may set up a framework for our example for generating spatial data on a lattice.
+The `conclique` package comes with the convenience functions `lattice_4nn_torus`, `min_conclique_cover`, and `assign_concliques`, which create a four-nearest neighbor lattice structure of a given dimension $n \times n$ wrapped on a torus (in this case, $20\times20$), generate a minimal conclique cover, and assign the conclique labels to a grid, respectively. With these helper functions, one may set up a framework for our example for generating spatial data on a lattice.
 
 
 ### Simulation
 
-By exploiting the conditional independence of concliques, a batch updating Gibbs sampler can be used to simulate spatial values from this model. The algorithm for this sampler is as follows, where $\mathcal{Y}(\boldsymbol s)^{(j)}$ denotes the value of the observation at location $\boldsymbol s$ after iteration $j \geq 0$ of the algorithm:
+By exploiting the conditional independence of concliques, a batch updating Gibbs sampler can be used to simulate spatial values from this model. The algorithm for this sampler is as follows, where $Y^{(j)}(\boldsymbol s)$ denotes the value of the observation at location $\boldsymbol s$ after iteration $j \geq 0$ of the algorithm:
 
-1. Split locations into $Q$ disjoint concliques, $\mathcal{D} = \cup_{i = 1}^Q\mathcal{C}_i$.
+1. Split locations into $Q$ disjoint concliques, $\cup_{i = 1}^Q\mathcal{C}_i = \{\boldsymbol s_1, \dots, \boldsymbol s_n\}$.
 1. Initialize the values of $\{Y^{(0)}(\boldsymbol s): \boldsymbol s \in \{\mathcal{C}_2, \dots, \mathcal{C}_Q\}\}$.
 1. For $i = 1, \dots, M$,
     1. Considering all $\boldsymbol s_j \in \mathcal{C}_1$, sample $\{Y^{(i)}(\boldsymbol s_j) :  \boldsymbol s_j \in \mathcal{C}_1 \}$ by independently drawing $Y^{(i)}(\boldsymbol s_j) \sim F(\cdot|\{Y^{(i-1)}(\boldsymbol s), \boldsymbol s \in N_j\})$
-    1. Set $\ell =2$. Considering all $\boldsymbol s_j \in \mathcal{C}_\ell$, sample $\{Y^{(i)}(\boldsymbol s_j): \boldsymbol s_j \in \mathcal{C}_\ell\}$ by independently drawing $Y^{(i)}(\boldsymbol s_j) \sim F(\cdot|\{Y^{(i)}(\boldsymbol s), \boldsymbol s \in N_j \cap \mathcal{C}_k \text{ where } \ell < k\}, \{Y^{(i - 1)}(\boldsymbol s), \boldsymbol s \in N_j \cap \mathcal{C}_k \text{ where } \ell > k\})$
+    1. Set $\ell =2$. Considering all $\boldsymbol s_j \in \mathcal{C}_\ell$, sample $\{Y^{(i)}(\boldsymbol s_j): \boldsymbol s_j \in \mathcal{C}_\ell\}$ by independently drawing $Y^{(i-1)}(\boldsymbol s_j) \sim F(\cdot|\{Y^{(i)}(\boldsymbol s), \boldsymbol s \in N_j \cap \mathcal{C}_k \text{ where } \ell < k\}, \{Y^{(i)}(\boldsymbol s), \boldsymbol s \in N_j \cap \mathcal{C}_k \text{ where } \ell > k\})$
     1. For $Q>2$, repeat step 2 for each $\ell=3,\ldots,Q$.
     
 This is a departure from the traditional algorithm for sampling spatial data, which samples each location sequentially. In the sequential Gibbs sampler, one iteration will consist of $n$ steps, whereas with the conclique based Gibbs sampler, one iteration will consist of $Q$ steps (where a block update is performed with simultaneous, independent draws). The goal is to speed up computation by incorporating this batch updating. For demonstration purposes, we simulate data from a four-nearest neighbor MRF model with Gaussian full conditional:
 $$
-  f_i(y(\boldsymbol s_i)|\boldsymbol y(\mathcal{N}_i),\kappa,\eta,\rho) = \frac{1}{\sqrt{2 \pi} \rho}\exp\left( -\frac{[y(\boldsymbol s_i) - \mu(\boldsymbol s_i) ]^2}{2 \rho^2}\right)
+  f_i(y(\boldsymbol s_i)|\boldsymbol y(\mathcal{N}_i),\kappa,\eta,\rho) = \frac{1}{\sqrt{2 \pi} \rho}\exp\left( -\frac{[y(\boldsymbol s_i) - \mu(\boldsymbol s_i) ]^2}{2 \rho^2}\right), \quad y(\boldsymbol s_i) \in \mathbb{R}
 $$
-with conditional mean
+with conditional variance $\rho^2$ and conditional mean
 $$
-\mu(\boldsymbol s_i) = \kappa + \eta \sum_{\boldsymbol s_j \in \mathcal{N}_i}[y(\boldsymbol s_j)-\kappa].
+\mu(\boldsymbol s_i) = \kappa + \eta \sum_{\boldsymbol s_j \in \mathcal{N}_i}[y(\boldsymbol s_j)-\kappa],
 $$
-where $\rho^2$ is the conditional variance for each location, $\eta$ represents a dependence parameter and $\kappa$ represents a location parameter specifying the (unconditional) mean of each location [@kaiser2012centered]. As an example, we will simulate from the Gaussian MRF with $\rho^2 = 2, \kappa = 20, \eta = 0.24$ using both a conclique-based Gibbs sampler and a sequential Gibbs sampler to compare run time for $10,000$ iterations of the sampler generating data on a $20\times 20$ lattice.
+where $\eta$ represents a dependence parameter and $\kappa$ represents a location parameter specifying the (unconditional) mean of each observation [@kaiser2012centered]. As an example, we will simulate from the Gaussian MRF with $\rho^2 = 2, \kappa = 20, \eta = 0.24$ using both a conclique-based Gibbs sampler and a sequential Gibbs sampler to compare run time for $10,000$ iterations of the sampler generating data on a $20\times 20$ lattice.
 
-```{r concliques-contd, echo=TRUE}
+```{r concliques-contd}
 neighbors <- get_neighbors(lattice)
 params <- list(rho = sqrt(2), kappa = 10, eta = .24)
 inits <- matrix(0, nrow = N, ncol = N)
@@ -130,8 +130,7 @@ conclique_simulation <- run_conclique_gibbs(concliques, neighbors, inits,
                                             "gaussian_single_param", 
                                             params, num_sample)
 
-sequential_simulation <- run_sequential_gibbs(neighbors, inits, 
-                                              "gaussian_single_param", 
+sequential_simulation <- run_sequential_gibbs(neighbors, inits, "gaussian_single_param", 
                                               params, num_sample)
 ```
 
@@ -147,7 +146,7 @@ seq_time <- Sys.time() - time
 ```
 
 ```{r load-timing-data, echo=FALSE}
-load("data/6_timings.RData")
+load("../../simulation-4nn/written/6_timings.RData")
 
 summary_times <- timings %>% 
   filter(N == 75 & n.iter == 10000) %>% 
@@ -178,7 +177,7 @@ conclique_dat <- rmvnorm(1, mu, covar)
 
 ```{r timings, echo=FALSE, fig.height=3, fig.cap="\\label{fig:timings}Comparisons of log time for simulation of four-nearest neighbor Gaussian MRF data on a lattice of size $m \\times m$ for various size grids, $m = 10, 20, 30, 50, 100$, using sequential and conclique-based Gibbs samplers."}
 timings %>%
-  filter(n.iter == 10000) %>%
+  filter(n.iter == 1000) %>%
   gather(gibbs, time, conclique, sequential) %>%
   group_by(N, gibbs) %>%
   mutate(mean_time = mean(time)) %>%
@@ -204,16 +203,16 @@ $$
 R(\boldsymbol s_i) = F(Y(\boldsymbol s_i)|\{Y(\boldsymbol s_j): \boldsymbol s_j \in \mathcal{N}_i \}, \boldsymbol \theta), \quad i = 1, \dots, n,
 $$
 
-where $F(y|y(\mathcal{N}_i),\boldsymbol \theta) \equiv F_i(y|y(\mathcal{N}_i), \boldsymbol\theta)$ denotes the conditional cdf of observation $Y(s_i)$, assumed to have a common form $F$ for all locations. Similar residuals, $R(\boldsymbol s_i)$, can be defined for non-continuous $F$ too. It then holds that *within* a conclique, the generalized spatial residuals are iid Uniform$(0, 1)$-distributed if $F(\cdot | \cdot)$ corresponds to the true form of an underlying conditional distribution.
+where $F(y|y(\mathcal{N}_i),\boldsymbol \theta) \equiv F_i(y|y(\mathcal{N}_i), \boldsymbol\theta)$ denotes the conditional cdf of observation $Y(s_i)$, assumed to have a common form $F$ for all locations. Similar residuals, $R(\boldsymbol s_i)$, can be defined for non-continuous $F$ too. It then holds that, *within* a conclique, the generalized spatial residuals are iid Uniform$(0, 1)$-distributed if $F(\cdot | \cdot)$ corresponds to the true form of the underlying conditional distribution in a MRF model specification [cf. @kaiser2012goodness].
 
-The spatial residuals are obtainable using the `conclique` package. We can continue with our example from Section \ref{concliques} using spatial data on a $20 \times 20$ grid from a four-nearest neighbor Gaussian MRF with $\rho^2 = 2, \kappa = 20, \eta = 0.24$. To demonstrate the use of generalized spatial residuals as a fit assessment tool, we generate data from the true model and compute residuals with the true model parameters as well as misspecified parameters, say one with $\eta = -0.10$. We compare the empirical cdf of the generalized spatial residuals within each conclique, $\{R(\boldsymbol s_i): \boldsymbol s_i \in \mathcal{C}_j\}_{j = 1}^Q$ to the cdf of a Uniform$(0,1)$, where $Q = 2$ in our example with a four-nearest neighborhood. The results are in Figure \ref{fig:compare}.
+The spatial residuals are obtainable using the `conclique` package. For demonstration, we continue with our example from Section \ref{concliques} using spatial data on a $20 \times 20$ grid from a four-nearest neighbor Gaussian MRF with $\rho^2 = 2, \kappa = 20, \eta = 0.24$. To illustrate the use of generalized spatial residuals as a fit assessment tool, we generate data from the true model and compute residuals using the true model parameters as well as misspecified parameters, say one with $\eta = -0.10$. We compare the empirical cdf of the generalized spatial residuals within each conclique, $\{R(\boldsymbol s_i): \boldsymbol s_i \in \mathcal{C}_j\}_{j = 1}^Q$ to the cdf of a Uniform$(0,1)$, where $Q = 2$ in our example with a four-nearest neighborhood. The results are in Figure \ref{fig:compare}.
 
-```{r resids, echo=TRUE}
+```{r resids}
 conclique_resids <- spatial_residuals(conclique_dat, neighbors, 
                                       "gaussian_single_param", params)
 ```
 
-```{r resids-plot, echo=FALSE, fig.height=3.2, fig.show='hold', out.width="50%", fig.cap='\\label{fig:compare}Looking at the emprirical cdf of generalized spatial residuals from simulated Gaussian MRF with $\\rho^2 = 2, \\kappa = 10, \\eta = 0.24$ versus the correct model (left) and an incorrect model with $\\eta = -0.10$ (right). The black line represents the cdf of a Uniform$(0,1)$.'}
+```{r resids-plot, echo=FALSE, fig.show='hold', fig.height = 3.2, out.width='49%', fig.cap='\\label{fig:compare}By conclique, the empirical cdf of generalized spatial residuals based on data from a Gaussian MRF with $\\rho^2 = 2, \\kappa = 10, \\eta = 0.24$ when computing residuals from the correct model (left) and an incorrect model with $\\eta = -0.10$ (right). The black line represents the cdf of a Uniform$(0,1)$.'}
 ##good model ------
 ecdf_vals <- lapply(concliques, function(conc) {fn <- ecdf(conclique_resids[conc]); fn(conclique_resids[conc])})
 names(ecdf_vals) <- 1:length(concliques)
@@ -258,15 +257,15 @@ ecdf_vals_err %>%
 
 ```
 
-Under the incorrect model, we can see that, for both for both concliques, all of the residuals are below the Uniform$(0,1)$ cdf, where the departure of uniformity suggests a poor model fit (which, in fact, is by design from using a misspecified model).
+Under the incorrect model, we can see that, for both for both concliques, all of the residuals are below the Uniform$(0,1)$ cdf, where the departure of uniformity suggests a poor model fit (which, in fact, is by design here to illustrate the behavior of residuals under a misspecified model).
 
 ### Test statistics
 
-In order to combine generalized spatial residuals across concliques to form a single test statistic, we look at the empirical cdf of the residuals and its difference to the Uniform$(0,1)$ cdf using some discrepancy measure (like the Kolmogorov-Smirnov statistic) and combine using an aggregation function (like maximum).
+In order to combine generalized spatial residuals across concliques to form a single test statistic, we look at the empirical cdf of the residuals and its difference to the Uniform$(0,1)$ cdf using some discrepancy measure (like the Kolmogorov-Smirnov statistic) and combine using an aggregation function (like maximum); see also @kaiser2012goodness.
 
-Both the Kolmogorov-Smirnov statistic and the Cramèr-von-Mises criterion are implemented in `conclique`, and any user specified aggregation can be supplied; `mean` and `max` are reasonable choices. In this example, we employ a maximum across concliques of the Kolmogorov-Smirnov statistic.
+Both the Kolmogorov-Smirnov statistic and the Cramèr-von-Mises criterion are implemented in `conclique`, and any user specified aggregation can be supplied; `mean` and `max` are reasonable choices. In this example, we consider the generalized spatial residuals as in Figure \ref{fig:compare}, with residuals computed for $Q=2$ concliques (under both the correct and incorrect conditional Gaussian model with four-nearest neighbors). We use the Kolmogorov-Smirnov (KS) statistic to compare residuals within each conclique to a Uniform$(0,1)$ distribution and create a single test statistic by taking the maximum of KS statistics over two concliques. For illustration, the test statistic is calculated using residuals from both correct and incorrect models, as reported next.            
 
-```{r gof, echo=TRUE}
+```{r gof}
 conclique_gof <- gof_statistics(conclique_resids, concliques, "ks", "max")
 conclique_gof_err <- gof_statistics(conclique_resids_err, concliques, "ks", "max")
 ```
@@ -277,14 +276,14 @@ data.frame(True = conclique_gof, Incorrect = conclique_gof_err) %>%
   print(include.rownames = FALSE, comment = FALSE)
 ```
 
-We can see that the incorrectly specified model has a higher value of the statistic, which points to potentially rejecting this model. However without a reference distribution, it becomes impossible to judge. As a remedy, we have the ability to generate spatial data from a model using our conclique-based Gibbs simulation functions in `conclique` and thereby simulate (or parametrically bootstrap) a reference distribution for conclique-based test statistics.
+We can see that the incorrectly specified model has a higher value of the statistic, which points to potentially rejecting this model. However, without a reference distribution, the meaning behind the size of a test statistic becomes impossible to judge. To this end, we have the ability to generate spatial data from a model using our conclique-based Gibbs simulation functions in `conclique` and thereby simulate (or parametrically bootstrap) a reference distribution for conclique-based test statistics.
 
 ### Getting a reference distribution
 
-In order to answer the question, "Could my data have come from my fitted model?", we will employ a GOF test using the framework laid out in Sections \ref{generalized-spatial-residuals} and \ref{test-statistics} and use a parametric bootstrap (implemented via the conclique-based Gibbs sampler from Section \ref{simulation}) to obtain the reference distribution for our statistic. Prior to using the conclique-based Gibbs sampler, we fit the model using a pseudo-likelihood approach [@besag1974spatial] and obtained estimates for $\eta, \kappa,$ and $\rho^2$ to the data generated from a four-nearest neighbor Gaussian MRF with $\rho^2 = 2, \kappa = 10, \eta = 0.24$. These estimates can be found in Table \ref{tab:ests}.
+In order to answer the question, "Could the data have plausibly arisen from the fitted model?", we will employ a GOF test using the framework laid out in Sections \ref{generalized-spatial-residuals} and \ref{test-statistics} and use a parametric bootstrap (implemented via the conclique-based Gibbs sampler from Section \ref{simulation}) to obtain the reference distribution for our statistic. Prior to using the conclique-based Gibbs sampler, we fit the model using a pseudo-likelihood approach [@besag1974spatial] and obtained estimates for $\eta, \kappa,$ and $\rho^2$ to the previous data generated from a four-nearest neighbor Gaussian MRF with $\rho^2 = 2, \kappa = 10, \eta = 0.24$. These estimates can be found in Table \ref{tab:ests}.
 
 
-```{r fit-model, echo=FALSE, results='asis'}
+```{r fit-model, echo = FALSE, results='asis'}
 fit_gauss_4nn <- function(data, neighbors, params0) {
   # score functions
   score_fns <- function(params, data) {
@@ -334,11 +333,11 @@ data.frame(eta = mple$eta,
   rename(`$\\hat{\\eta}$` = eta,
          `$\\hat{\\kappa}$` = kappa,
          `$\\hat{\\rho}^2$` = rho) %>%
-  xtable(caption = "\\label{tab:ests}Maximum pseudo-likelihood estimates for $\\eta, \\kappa,$ and $\\rho^2$ for data generated from a four-nearest neighbor Gaussian MRF with $\\rho^2 = 2, \\kappa = 10, \\eta = .24$.") %>%
+  xtable(caption = "\\label{tab:ests}Maximum pseudo-likelihood estimates for $\\eta, \\kappa,$ and $\\rho^2$ for data realized from a four-nearest neighbor Gaussian MRF with $\\rho^2 = 2, \\kappa = 10, \\eta = .24$.") %>%
   print(include.rownames = FALSE, sanitize.text.function = function(x) x, comment = FALSE)
 ```
 
-```{r log-normal, echo=FALSE}
+```{r log-normal, echo = FALSE}
 # Computed p-values from test statistics
 lognormal_dat <- exp(conclique_dat)
 
@@ -347,31 +346,30 @@ mple_lognormal <- fit_gauss_4nn(lognormal_dat, neighbors, params0_log)
 gof_bs_lognormal <- bootstrap_gof(lognormal_dat, concliques, neighbors, inits, "gaussian_single_param", "gaussian_single_param", "fit_gauss_4nn", params0_log, 10000, "ks", "max", plot.include = TRUE)
 ```
 
-From the fitted model, we can then use a convenience function in `conclique`, called `bootstrap_gof` to obtain the reference distribution of the GOF statistics that we have chosen (the maximum across concliques of the Kolmogorov-Smirnov statistic). This function will return the probability of obtaining a larger value of the statistic, a vector of quantile values from the reference distribution (if desired), and a summary plot of the distribution (if desired). See Figure \ref{fig:distn} for details.
+From the fitted model, we can then use a convenience function in `conclique`, called `bootstrap_gof` to obtain the reference distribution of the GOF statistics that we have chosen (the maximum across concliques of the Kolmogorov-Smirnov statistic). This function will return an approximated p-value associated with the GOB test statistic (i.e., the probability of a larger statistic value), a vector of quantile values from the reference distribution (if desired), and a summary plot of the distribution (if desired). See Figure \ref{fig:distn} for details.
 
-```{r bs, echo=TRUE}
+```{r bs}
 gof_bs <- bootstrap_gof(conclique_dat, concliques, neighbors, inits, 
                         "gaussian_single_param", "gaussian_single_param",
-                        "fit_gauss_4nn", params0, 10000, "ks", "max", 
-                        plot.include = TRUE)
+                        "fit_gauss_4nn", params0, 10000, "ks", "max", plot.include = TRUE)
 ```
 
 ```{r bs-plot, echo=FALSE, fig.cap="\\label{fig:distn}A summary plot of the bootstrapped reference distribution for the maximum across concliques of the Kologorov-Smirnov statistic from data generated from a four-nearest neighbor Gaussian MRF with $\\rho^2 = 2, \\kappa = 10, \\eta = 0.24$. We fail to reject the null hypothesis, meaning this is an adequate model for the data.", fig.height=3}
 gof_bs$plot
 ```
 
-From the reference distribution generated by the parametric bootstrap within `conclique`, the test statistic is $`r round(gof_bs$t, 4)`$ with a p-value of $`r round(gof_bs$p.value, 4)`$. For the original Gaussian model fit to normal data, we fail to reject the null hypothesis, meaning the four-nearest neighbor Gaussian model is not an obviously inadequate one for these data. We should expect this result because this exercise fit the known model family to the data (Gaussian MRF with one dependence parameter and a four-nearest neighbor structure). For contrast, fitting this same Gaussian MRF model with four-nearest neighbors to data generated from a spatial lognormal model gives a p-value of $`r round(gof_bs_lognormal$p.value, 4)`$ from the same conclique-based GOF procedure, indicating the GOF method detects this departure in distributional class. However, through the use of `conclique`, there are many distributions possible, and with the ability to extend both model distribution family (e.g., non-Gaussian) and assumed neighborhood structure, the prospects are numerous.
+From the reference distribution generated by the parametric bootstrap within `conclique`, the test statistic is $`r round(gof_bs$t, 4)`$ with a p-value of $`r round(gof_bs$p.value, 4)`$. In testing the fit of the conditional Gaussian model to the data, we fail to reject the null hypothesis, meaning the four-nearest neighbor Gaussian model is not an obviously inadequate one for these data. We should expect this result because this exercise knowingly fit the correct, or true data-generating, MRF model (Gaussian MRF with one dependence parameter and a four-nearest neighbor structure). For contrast, testing the GOF of this same Gaussian MRF model with four-nearest neighbors to synthetic data generated from a spatial log-normal model gives a p-value of $`r round(gof_bs_lognormal$p.value, 4)`$ from the same conclique-based GOF procedure, indicating the GOF method detects this departure in distributional class. While we focused on a Gaussian MRF for demonstration, through the use of `conclique`, many MRF distributional types and forms, including non-Gaussian ones, can potentially be considered in GOF model tests.
 
 ## Extending `conclique`
 
-For simulating from a Gaussian MRF (e.g., with four-nearest neighbor structure), there are other potential simulation options available, such as determining the joint multivariate normal distribution for the data from specified conditional Gaussian distributions (i.e. finding the spatial corvariance matrix for the observations) and considering direct simulation; see @cressie1993statistics One of the key advantages to using conclique-based approaches for simulation, as well as GOF tests, is the ability to consider non-Gaussian conditional models that go beyond a four-nearest neighbor structure.
+For simulating from a Gaussian MRF (e.g., with four-nearest neighbor structure), other potential simulation options also exist, such as determining the joint multivariate normal distribution for the data from specified conditional Gaussian distributions (i.e. finding the spatial covariance matrix for the observations) and considering direct simulation or by using circulant embedding; see @cressie1993statistics and @rue2005gaussian]. One of the key advantages to using conclique-based approaches for simulation, as well as GOF tests, is the ability to consider non-Gaussian conditional models that go beyond a four-nearest neighbor structure.
 
 ### Dependence structure
 
 The `conclique` package comes with a function to create a lattice of specified dimension with four-nearest neighbor structure wrapped on a torus (`lattice_4nn_torus`). However, the user can create his or her own dependence structure by creating an `igraph` [@igraph] object with each location as a node and the dependence as the edges. The dimension of the lattice must be kept as an attribute for the object, this is accomplished using
 
 
-```{r, eval=FALSE, echo=TRUE}
+```{r, eval=FALSE}
 igraph::set.graph.attribute(lattice,  "dimvector", dimvec)
 ```
 
@@ -379,15 +377,15 @@ where `dimvec` is a vector storing the dimensions of the lattice, for example `c
 
 ### Conditional distribution
 
-Additionally, the user can specify a different conditional distribution for each spatial location (cf. @kaiser2000construction for a description of such constructions). In order to accomplish this, the user must provide a sampler function which takes as parameters 
+Additionally, the user can specify a different conditional distribution for each spatial location [cf. @kaiser2000construction] for a description of such constructions). In order to accomplish this, the user must provide a sampler function which takes as parameters 
 
 - `data` A list containing two elements, `sums` and `nums`, which contain the sum of the data in each neighborhood as well as the number of locations in the neighborhood for each point in the conclique. This list also can contain the $x$ and $y$ coordinates of each spatial location if desired.
-- `params` A named list of parameter values, that parameterize the distribution.
+- `params` A named list of parameter values, that parameterize the conditional distribution.
  
-This function should return a sampled data set the same size as the original data. For example, the sampler function for the single dependency parameter Gaussian model is reproduced below.
+This function should return a sampled data set of the same size as the original data. For example, the sampler function for the single dependency parameter Gaussian model is reproduced below.
 
 
-```{r, eval=FALSE, echo=TRUE}
+```
 gaussian_single_param_sampler <- function(data, params) {
   rho <- params$rho
   kappa <- params$kappa
@@ -403,12 +401,12 @@ gaussian_single_param_sampler <- function(data, params) {
 
 ### Spatial residuals
 
-In order to extend `conclique` to use an arbitrary conditional distribution for the generalized spatial residuals, the user must specify a cdf function which takes as parameters the same parameters as the sampler function from Section \ref{conditional-distribution}, `data` and `params`.
+In order to extend `conclique` to use an arbitrary conditional distribution for defining the generalized spatial residuals, the user must specify a cdf function which takes, as parameters, the same parameters as the sampler function from Section \ref{conditional-distribution}, `data` and `params`.
 
 For example, the cdf function for the single dependency parameter Gaussian model is reproduced below.
 
 
-```{r, eval=FALSE, echo=TRUE}
+```{r, eval=FALSE}
 gaussian_single_param_cdf <- function(data, params) {
   rho <- params$rho
   kappa <- params$kappa
@@ -423,4 +421,4 @@ gaussian_single_param_cdf <- function(data, params) {
 
 ## Conclusion
 
-`conclique` is a fast and flexible implementation of a conclique-based method for simulating MRF data and performing associated GOF tests. By employing a conclique-based sampling method, many spatial models become feasible (like Bernoulli, Poisson, truncated Gamma with one or multiple dependence parameters). Through the clever use of conditional independence within a conclique [@kaiser2012goodness] and an `Rcpp` back end [@rcpp], this method achieves improved speed over traditional spatial Gibbs sampling methods, allowing for a broad range of applications.
+`conclique` is a fast and flexible implementation of a conclique-based method for simulating MRF data and performing associated GOF tests. By employing a conclique-based sampling method, many spatial models become feasible (like Bernoulli, Poisson, truncated Gamma with one or multiple dependence parameters). Through the use of conditional independence within a conclique [@kaiser2012goodness] and an `Rcpp` back end [@rcpp], this method offers benefits for computational speed in simulating MRF data compared to traditional spatial Gibbs sampling methods, allowing for a broad range of applications and inference using model-based simulation.
