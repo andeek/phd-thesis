@@ -1,7 +1,7 @@
 # `conclique`: SIMULATION AND GOODNESS OF FIT FOR SPATIAL AND OTHER MARKOVIAN DATA STRUCTURES {#package-chapter}
 
 ```{block, type='paperinfo_', echo=TRUE}
-to be submitted to the *R Journal*
+to be submitted to *The R Journal*
 ```
 
 ```{block, type='paperauthor_', echo=TRUE}
@@ -21,7 +21,7 @@ set.seed(1022)
 
 Markov random field (MRF) models are common for spatial data (as well as graph, network and other data structures). Rather than specifying a joint distribution directly, a  model is specified through a set of full conditional distributions for the spatial locations. The `R` package `conclique` provides a fast way to simulate from a MRF model using a modified Gibbs sampler and implements a formal goodness-of-fit (GOF) test for model assessment [@kaiser2012goodness].
 
-Throughout this paper, we will employ the following notational conventions: see also @kaiser2000construction for spatial MRF specifications. Spatial locations are denoted $\boldsymbol s_i$ where the set of all locations $\{\boldsymbol s_i: i = 1, \dots, n\}$ is assumed to lie on a regular lattice, for simplicity. The values of random variables at these locations will be denoted $\{ Y(\boldsymbol s_i): i=1, \dots, n \}$ and spatial neighborhoods, $\mathcal{N}_i$ will be pre-specified for each location $\boldsymbol s_i$, where the conditional distribution of $Y(\bolsymbol s_i)$ shall depend on observations and locations in $\mathcal{N}_i \subset \{\boldsymbol s_j:j\not=i\}$. We then denote the neighboring values as $\boldsymbol y(\mathcal{N}_i) = \{ y(\boldsymbol s_j) : \boldsymbol s_j \in \mathcal{N}_i \}$ and define the full conditional distributions for each spatial location as $\{ f_i(y(\boldsymbol s_i)|\boldsymbol y(\mathcal{N}_i), \boldsymbol \theta): i=1, \dots, n \}$, where each $f_i(y(\boldsymbol s_i)|\boldsymbol y(\mathcal{N}_i), \boldsymbol \theta)$ is conditional a probability mass or probability density function (pmf/pdf) of $Y(\boldsymbol s_i)$ given values for its neighbors $\boldsymbol y(\mathcal{N}_i)$. Lastly, we let $F_i(y(\boldsymbol s_i)|\boldsymbol y(\mathcal{N}_i), \boldsymbol \theta)$ be the conditional distribution function (cdf) of $Y(\boldsymbol s_i)$ given values for its neighbors $\boldsymbol y(\mathcal{N}_i)$ and a potential set $\boldsymbol \theta$ of parameter values. For simplicity, we will assume a common conditional form ($f_i=f$ and $F_i = F$) for all locations, which occurs often in practice. 
+Throughout this paper, we will employ the following notational conventions: see also @kaiser2000construction for spatial MRF specifications. Spatial locations are denoted $\boldsymbol s_i$ where the set of all locations $\{\boldsymbol s_i: i = 1, \dots, n\}$ is assumed to lie on a regular lattice, for simplicity. The values of random variables at these locations will be denoted $\{ Y(\boldsymbol s_i): i=1, \dots, n \}$ and spatial neighborhoods, $\mathcal{N}_i$ will be pre-specified for each location $\boldsymbol s_i$, where the conditional distribution of $Y(\boldsymbol s_i)$ shall depend on observations and locations in $\mathcal{N}_i \subset \{\boldsymbol s_j:j\not=i\}$. We then denote the neighboring values as $\boldsymbol y(\mathcal{N}_i) = \{ y(\boldsymbol s_j) : \boldsymbol s_j \in \mathcal{N}_i \}$ and define the full conditional distributions for each spatial location as $\{ f_i(y(\boldsymbol s_i)|\boldsymbol y(\mathcal{N}_i), \boldsymbol \theta): i=1, \dots, n \}$, where each $f_i(y(\boldsymbol s_i)|\boldsymbol y(\mathcal{N}_i), \boldsymbol \theta)$ is conditional a probability mass or probability density function (pmf/pdf) of $Y(\boldsymbol s_i)$ given values for its neighbors $\boldsymbol y(\mathcal{N}_i)$. Lastly, we let $F_i(y(\boldsymbol s_i)|\boldsymbol y(\mathcal{N}_i), \boldsymbol \theta)$ be the conditional distribution function (cdf) of $Y(\boldsymbol s_i)$ given values for its neighbors $\boldsymbol y(\mathcal{N}_i)$ and a potential set $\boldsymbol \theta$ of parameter values. For simplicity, we will assume a common conditional form ($f_i=f$ and $F_i = F$) for all locations, which occurs often in practice. 
 
 In the following sections, we introduce the `conclique` package through demonstration of simulation from a particular MRF model as well as an associated simulation-based test for assessing GOF of spatial MRF models from @kaiser2012goodness. Currently `conclique` can be installed via GitHub using the following `R` code.
 
@@ -146,7 +146,7 @@ seq_time <- Sys.time() - time
 ```
 
 ```{r load-timing-data, echo=FALSE}
-load("../../simulation-4nn/written/6_timings.RData")
+load("data/6_timings.RData")
 
 summary_times <- timings %>% 
   filter(N == 75 & n.iter == 10000) %>% 
@@ -263,7 +263,7 @@ Under the incorrect model, we can see that, for both for both concliques, all of
 
 In order to combine generalized spatial residuals across concliques to form a single test statistic, we look at the empirical cdf of the residuals and its difference to the Uniform$(0,1)$ cdf using some discrepancy measure (like the Kolmogorov-Smirnov statistic) and combine using an aggregation function (like maximum); see also @kaiser2012goodness.
 
-Both the Kolmogorov-Smirnov statistic and the Cramèr-von-Mises criterion are implemented in `conclique`, and any user specified aggregation can be supplied; `mean` and `max` are reasonable choices. In this example, we consider the generalized spatial residuals as in Figure \ref{fig:compare}, with residuals computed for $Q=2$ concliques (under both the correct and incorrect conditional Gaussian model with four-nearest neighbors). We use the Kolmogorov-Smirnov (KS) statistic to compare residuals within each conclique to a Uniform$(0,1)$ distribution and create a single test statistic by taking the maximum of KS statistics over two concliques. For illustration, the test statistic is calculated using residuals from both correct and incorrect models, as reported next.            
+Both the Kolmogorov-Smirnov statistic and the Cramèr-von-Mises criterion are implemented in `conclique`, and any user specified aggregation can be supplied; `mean` and `max` are reasonable choices. In this example, we consider the generalized spatial residuals as in Figure \ref{fig:compare}, with residuals computed for $Q=2$ concliques (under both the correct and incorrect conditional Gaussian model with four-nearest neighbors). We use the Kolmogorov-Smirnov (KS) statistic to compare residuals within each conclique to a Uniform$(0,1)$ distribution and create a single test statistic by taking the maximum of KS statistics over two concliques. For illustration, the test statistic is calculated using residuals from both correct and incorrect models, as reported in Table \ref{tab:gof_table}.        
 
 ```{r gof}
 conclique_gof <- gof_statistics(conclique_resids, concliques, "ks", "max")
@@ -272,7 +272,7 @@ conclique_gof_err <- gof_statistics(conclique_resids_err, concliques, "ks", "max
 
 ```{r gof_table, echo=FALSE, results='asis'}
 data.frame(True = conclique_gof, Incorrect = conclique_gof_err) %>%
-  xtable() %>%
+  xtable(caption="The test statistic, maximum of KS statistics, calculated using residuals from both correct and incorrect models.", label = "tab:gof_table") %>%
   print(include.rownames = FALSE, comment = FALSE)
 ```
 

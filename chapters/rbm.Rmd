@@ -748,7 +748,8 @@ sample.params %>%
 options("scipen" = old_pen)
 
 cbind(tbl[1:8,], tbl[9:16,], tbl[17:24,]) %>%
-  kable(caption = "Parameters used to fit a test case with $V = H = 4$. This parameter vector was chosen as a sampled value of $\\boldsymbol \\theta$ that was not near the convex hull of the sufficient statistics for a grid point in Figure \\ref{fig:degen-plots} with $< 5$\\% near-degeneracy.", align = rep(c("r", "r"), times = 3))
+  xtable(caption = "Parameters used to fit a test case with $V = H = 4$. This parameter vector was chosen as a sampled value of $\\boldsymbol \\theta$ that was not near the convex hull of the sufficient statistics for a grid point in Figure \\ref{fig:degen-plots} with $< 5$\\% near-degeneracy.", align = c("l", rep(c("r", "r"), times = 3))) %>%
+  print(sanitize.text.function=function(x){x}, include.rownames = FALSE, comment = FALSE)
 ```
 
 We considered a test case with $\nv = \nh = 4$ and parameters given in Table \@ref(tab:theta). This parameter vector was chosen as a sampled value of $\boldsymbol \theta$ that was not near the convex hull of the space of values of sufficient statistics for a grid point in Figure \@ref(fig:degen-plots) with $< 5$\% near-degeneracy. We simulated $n = 5,000$ realizations of visibles as a training set and fit the RBM using three Bayes methodologies. These involved the following:
@@ -775,8 +776,6 @@ The three fitting methods are ordered by computational feasibility in a real-dat
 
 \begin{table}[ht]
 \centering
-\caption{The values used for the hyperparameters for all three fitting methods. A rule of thumb is imposed which decreases prior variances for the model parameters as the size of the model increases and also shrinks $\boldsymbol \theta_{interaction}$ more than $\boldsymbol \theta_{main}$. The common $C$ defining $C_1$ and $C_2$  in the BwTPLV method is chosen by tuning.}
-\label{tab:hyperparam}
 \begin{tabular}{|l|c|c|}
 \hline 
 Method & Hyperparameter & Value \\ 
@@ -791,6 +790,8 @@ Method & Hyperparameter & Value \\
  & $\sigma^2_{interaction}$ & $\frac{1}{\nh*\nv}$ \\
 \hline
 \end{tabular}
+\caption{The values used for the hyperparameters for all three fitting methods. A rule of thumb is imposed which decreases prior variances for the model parameters as the size of the model increases and also shrinks $\boldsymbol \theta_{interaction}$ more than $\boldsymbol \theta_{main}$. The common $C$ defining $C_1$ and $C_2$  in the BwTPLV method is chosen by tuning.}
+\label{tab:hyperparam}
 \end{table}
 
 It should be noted that BwTNLV (2.) and BwTNML (3.) are drawing from the same stationary posterior distribution for vectors of visibles. The difference between these two methods is in how well the chains mix and how quickly they arrive at the target posterior distribution. After a burn-in period of 50 iterations selected by inspecting the trace plots, we assess the issue of mixing in two ways. First, the autocorrelation functions (ACF) from each posterior sample corresponding to a model probability for a visible vector outcome $\mathbf{v}=(v_1,v_2,v_3,v_4)\in\{\pm 1\}^4$ (i.e., computed from $\boldsymbol \theta$ under (\@ref(eq:pmf))) are assessed and plotted in Figure \@ref(fig:acf) with BwTNLV in black and BwTNML in red. As expected, ACF corresponding to the method that marginalizes out the hidden variables from the likelihood decreases to zero at a much faster rate, indicating better mixing for the chain. 
@@ -924,16 +925,18 @@ $$
 M_{eff}^{(i)} = M\frac{\hat{\sigma}^2_i}{\hat{C}_i}.
 $$
 
-```{r m-eff}
+```{r m-eff, results='asis'}
 M_eff_table %>%
   gather(Image, M_eff, -Model) %>%
   spread(Model, M_eff) %>%
   mutate(Outcome = as.numeric(Image)) %>%
   select(Outcome, BwTNLV, BwTNML) %>%
-  arrange(Outcome) -> M_eff_tmp
+  arrange(Outcome) %>%
+  mutate(Outcome = as.character(Outcome)) -> M_eff_tmp
 
 cbind(M_eff_tmp[1:8,], M_eff_tmp[9:16,]) %>%
-  kable(digits = 2, caption = paste0("The effective sample sizes for a chain of length $M = 1000$ regarding all $16$ probabilities for possible vector outcomes of visibles. BwTNLV would require at least $", round(min(M_eff_tmp[, "BwTNML"])/min(M_eff_tmp[, "BwTNLV"]), 1), "$ times as many MCMC iterations to achieve the same amount of effective information about the posterior distribution."))
+  xtable(digits = 2, caption = paste0("The effective sample sizes for a chain of length $M = 1000$ regarding all $16$ probabilities for possible vector outcomes of visibles. BwTNLV would require at least $", round(min(M_eff_tmp[, "BwTNML"])/min(M_eff_tmp[, "BwTNLV"]), 1), "$ times as many MCMC iterations to achieve the same amount of effective information about the posterior distribution.")) %>%
+  print(include.rownames = FALSE, comment = FALSE)
 ```
 
 The effective sample sizes for a chain of length $M = 1000$ for inference about each of the $2^4 = 16$ model probabilities are presented in Table \@ref(tab:m-eff). These range from  $`r round(min(M_eff_tmp[, "BwTNML"]), 2)`$ to $`r round(max(M_eff_tmp[, "BwTNML"]), 2)`$ for BwTNML, while BwTNLV only yields between $`r round(min(M_eff_tmp[, "BwTNLV"]), 2)`$ and $`r round(max(M_eff_tmp[, "BwTNLV"]), 2)`$ effective draws. Thus, BwTNLV would require at least $`r round(min(M_eff_tmp[, "BwTNML"])/min(M_eff_tmp[, "BwTNLV"]), 1)`$ times as many iterations to be run of the MCMC chain in order to achieve the same amount of effective information about the posterior distribution. For this reason, consistent with the ACF results in Figure \@ref(fig:acf), BwTNLV does not seem to be an effective method for fitting the RBM if computing resources are at all limited.
