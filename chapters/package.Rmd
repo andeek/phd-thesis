@@ -5,7 +5,7 @@ to be submitted to *The R Journal*
 ```
 
 ```{block, type='paperauthor_', echo=TRUE}
-Andee Kaplan, Mark S. Kaiser, Soumendra N. Lahiri, and Daniel Nordman
+Andee Kaplan, Mark S. Kaiser, Soumendra N. Lahiri, and Daniel J. Nordman
 ```
 
 ## Abstract {-}
@@ -114,7 +114,7 @@ By exploiting the conditional independence of concliques, a batch updating Gibbs
     
 This is a departure from the traditional algorithm for sampling spatial data, which samples each location sequentially. In the sequential Gibbs sampler, one iteration will consist of $n$ steps, whereas with the conclique based Gibbs sampler, one iteration will consist of $Q$ steps (where a block update is performed with simultaneous, independent draws). The goal is to speed up computation by incorporating this batch updating. For demonstration purposes, we simulate data from a four-nearest neighbor MRF model with Gaussian full conditional:
 $$
-  f_i(y(\boldsymbol s_i)|\boldsymbol y(\mathcal{N}_i),\kappa,\eta,\rho) = \frac{1}{\sqrt{2 \pi} \rho}\exp\left( -\frac{[y(\boldsymbol s_i) - \mu(\boldsymbol s_i) ]^2}{2 \rho^2}\right), \quad y(\boldsymbol s_i) \in \mathbb{R}
+f_i(y(\boldsymbol s_i)|\boldsymbol y(\mathcal{N}_i),\kappa,\eta,\rho) = \frac{1}{\sqrt{2 \pi} \rho}\exp\left( -\frac{[y(\boldsymbol s_i) - \mu(\boldsymbol s_i) ]^2}{2 \rho^2}\right), \quad y(\boldsymbol s_i) \in \mathbb{R}
 $$
 with conditional variance $\rho^2$ and conditional mean
 $$
@@ -177,7 +177,7 @@ mu <- rep(params$kappa, N^2)
 conclique_dat <- rmvnorm(1, mu, covar)
 ```
 
-```{r timings, echo=FALSE, fig.height=3, fig.cap="\\label{fig:timings}Comparisons of log time for simulation of four-nearest neighbor Gaussian MRF data on a lattice of size $m \\times m$ for various size grids, $m = 10, 20, 30, 50, 100$, using sequential and conclique-based Gibbs samplers."}
+```{r timings, echo=FALSE, fig.height=3, fig.cap="\\label{fig:timings}Comparisons of log time for simulation of four-nearest neighbor Gaussian MRF data on a lattice of size $m \\times m$ for various size grids, $m = 5, 10, 20, 30, 50, 75$, using sequential and conclique-based Gibbs samplers."}
 timings %>%
   filter(n.iter == 1000) %>%
   gather(gibbs, time, conclique, sequential) %>%
@@ -200,11 +200,9 @@ Beyond simulation of data with Markovian dependence structure, `conclique` also 
 ### Generalized spatial residuals
 
 We can define a *generlized spatial residual* through substitution of a random variable, $Y(\boldsymbol s_i)$ and its neighbors $\{Y(\boldsymbol s_j): \boldsymbol s_j \in \mathcal{N}_i \}$, into a corresponding (continuous) conditional cdf:
-
 $$
 R(\boldsymbol s_i) = F(Y(\boldsymbol s_i)|\{Y(\boldsymbol s_j): \boldsymbol s_j \in \mathcal{N}_i \}, \boldsymbol \theta), \quad i = 1, \dots, n,
 $$
-
 where $F(y|y(\mathcal{N}_i),\boldsymbol \theta) \equiv F_i(y|y(\mathcal{N}_i), \boldsymbol\theta)$ denotes the conditional cdf of observation $Y(s_i)$, assumed to have a common form $F$ for all locations. Similar residuals, $R(\boldsymbol s_i)$, can be defined for non-continuous $F$ too. It then holds that, *within* a conclique, the generalized spatial residuals are iid Uniform$(0, 1)$-distributed if $F(\cdot | \cdot)$ corresponds to the true form of the underlying conditional distribution in a MRF model specification [cf. @kaiser2012goodness].
 
 The spatial residuals are obtainable using the `conclique` package. For demonstration, we continue with our example from Section \ref{concliques} using spatial data on a $20 \times 20$ grid from a four-nearest neighbor Gaussian MRF with $\rho^2 = 2, \kappa = 20, \eta = 0.24$. To illustrate the use of generalized spatial residuals as a fit assessment tool, we generate data from the true model and compute residuals using the true model parameters as well as misspecified parameters, say one with $\eta = -0.10$. We compare the empirical cdf of the generalized spatial residuals within each conclique, $\{R(\boldsymbol s_i): \boldsymbol s_i \in \mathcal{C}_j\}_{j = 1}^Q$ to the cdf of a Uniform$(0,1)$, where $Q = 2$ in our example with a four-nearest neighborhood. The results are in Figure \ref{fig:compare}.
@@ -283,7 +281,6 @@ We can see that the incorrectly specified model has a higher value of the statis
 ### Getting a reference distribution
 
 In order to answer the question, "Could the data have plausibly arisen from the fitted model?", we will employ a GOF test using the framework laid out in Sections \ref{generalized-spatial-residuals} and \ref{test-statistics} and use a parametric bootstrap (implemented via the conclique-based Gibbs sampler from Section \ref{simulation}) to obtain the reference distribution for our statistic. Prior to using the conclique-based Gibbs sampler, we fit the model using a pseudo-likelihood approach [@besag1974spatial] and obtained estimates for $\eta, \kappa,$ and $\rho^2$ to the previous data generated from a four-nearest neighbor Gaussian MRF with $\rho^2 = 2, \kappa = 10, \eta = 0.24$. These estimates can be found in Table \ref{tab:ests}.
-
 
 ```{r fit-model, echo = FALSE, results='asis'}
 fit_gauss_4nn <- function(data, neighbors, params0) {

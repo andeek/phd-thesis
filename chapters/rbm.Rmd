@@ -5,12 +5,12 @@ to be submitted to the *Journal of the American Statistical Association*
 ```
 
 ```{block, type='paperauthor_', echo=TRUE}
-Andee Kaplan, Daniel Nordman, and Stephen Vardeman
+Andee Kaplan, Daniel J. Nordman, and Stephen B. Vardeman
 ```
 
 ## Abstract {-}
 
-  A restricted Boltzmann machine (RBM) is an undirected graphical model constructed for discrete or continuous random variables, with two layers, one hidden and one visible, and no conditional dependency within a layer. In recent years, RBMs have risen to prominence due to their connection to deep learning. By treating a hidden layer of one RBM as the visible layer in a second RBM, a deep architecture can be created. RBMs are thought to thereby have the ability to encode very complex and rich structures in data, making them attractive for supervised learning. However, the generative behavior of RBMs is largely unexplored. In this paper, we discuss the relationship between RBM parameter specification in the binary case and the tendency to exhibit model properties such as degeneracy, instability and uninterpretability. We also describe the difficulties that arise in likelihood-based and Bayes fitting of such (highly flexible) models, especially as Gibbs sampling (quasi-Bayes) methods are often advocated for the RBM model structure.
+A restricted Boltzmann machine (RBM) is an undirected graphical model constructed for discrete or continuous random variables, with two layers, one hidden and one visible, and no conditional dependency within a layer. In recent years, RBMs have risen to prominence due to their connection to deep learning. By treating a hidden layer of one RBM as the visible layer in a second RBM, a deep architecture can be created. RBMs are thought to thereby have the ability to encode very complex and rich structures in data, making them attractive for supervised learning. However, the generative behavior of RBMs is largely unexplored. In this paper, we discuss the relationship between RBM parameter specification in the binary case and the tendency to exhibit model properties such as degeneracy, instability and uninterpretability. We also describe the difficulties that arise in likelihood-based and Bayes fitting of such (highly flexible) models, especially as Gibbs sampling (quasi-Bayes) methods are often advocated for the RBM model structure.
 
 
 ```{r helpers, echo=FALSE, message=FALSE, warnings=FALSE}
@@ -111,18 +111,17 @@ A common use for RBMs is to create features for use in classification. For examp
 #### Joint distribution 
 
 Let $\boldsymbol x = (h_1, \dots, h_\nh, v_1,\dots,v_\nv)$ represent the states of the visible and hidden nodes in a RBM for some integers $\nv, \nh \ge 1$. Each single binary random variable, visible or hidden, will take its values in a common coding set $\mathcal{C}$, where we allow one of two possibilities for the coding set, $\mathcal{C}=\{0,1\}$ or $\mathcal{C}=\{-1,1\}$, with "$1$" always indicating the "high" value of the variable. While $\mathcal{C}=\{0,1\}$ may be a natural starting point, we argue in Section \@ref(explorations-of-model-properties-through-simulation) that the coding $\mathcal{C}=\{-1,1\}$ induces more interpretable model properties for the RBM. A standard parametric form for probabilities corresponding to a potential vector of states, $X = (H_1, \dots, H_\nh, V_1,\dots,V_\nv)$, for the nodes is
-
 \begin{align}
 (\#eq:pmf)
 f_{\boldsymbol \theta} (\boldsymbol x)\equiv P_{\boldsymbol \theta}(\boldsymbol X = \boldsymbol x) = \frac{\exp\left(\sum\limits_{i = 1}^\nv \sum\limits_{j=1}^\nh \theta_{ij} v_i h_j + \sum\limits_{i = 1}^\nv\theta_{v_i} v_i + \sum\limits_{j = 1}^\nh\theta_{h_j} h_j\right)}{\gamma(\boldsymbol \theta)}, \quad \boldsymbol x \in \mathcal{C}^{\nh + \nv} 
 \end{align}
-
 where $\boldsymbol \theta \equiv (\theta_{11}, \dots, \theta_{1\nh}, \dots, \theta_{\nv 1}, \dots, \theta_{\nv \nh}, \theta_{v_1}, \dots, \theta_{v_\nv}, \theta_{h_1}, \dots, \theta_{h_\nh}) \in \mathbb{R}^{\nv + \nh + \nv*\nh}$ denotes the vector of model parameters and the denominator 
-$$\gamma(\boldsymbol \theta) = \sum_{\boldsymbol x \in \mathcal{C}^{\nh+\nv}}\exp\left(\sum_{i = 1}^\nv \sum_{j=1}^\nh \theta_{ij} v_i h_j + \sum_{i = 1}^\nv\theta_{v_i} v_i + \sum_{j = 1}^\nh\theta_{h_j} h_j\right)
+$$
+\gamma(\boldsymbol \theta) = \sum_{\boldsymbol x \in \mathcal{C}^{\nh+\nv}}\exp\left(\sum_{i = 1}^\nv \sum_{j=1}^\nh \theta_{ij} v_i h_j + \sum_{i = 1}^\nv\theta_{v_i} v_i + \sum_{j = 1}^\nh\theta_{h_j} h_j\right)
 $$ 
 is the normalizing function that ensures the probabilities (\@ref(eq:pmf)) sum to one. For $\boldsymbol x = (h_1, \dots, h_\nh, v_1, \dots, v_\nh) \in \mathcal{C}^{\nv + \nh}$ and 
 \begin{align}
-(\#eq:t)
+\boldsymbol t(\boldsymbol x) &= (h_1, \dots, h_\nh, v_1, \dots, v_\nv, v_1 h_1, \dots, v_\nv h_\nh) \in \mathcal{C}^{\nh + \nv + \nh*\nv}, (\#eq:t)
 \end{align}
 let $\mathcal{T} = \{\boldsymbol t(\boldsymbol x): \boldsymbol x \in \mathcal{C}^{\nv + \nh}\} \subset \mathbb{R}^{\nv + \nh + \nv * \nh}$ be the set of possible values for the vector of variables needed to compute probabilities (\@ref(eq:pmf)) in the model, and write $Q_{\boldsymbol \theta}(\boldsymbol x) = \sum\limits_{i = 1}^\nh\sum\limits_{j=1}^\nv \theta_{ij} h_i v_j + \sum\limits_{i = 1}^\nh\theta_{hi} h_i + \sum\limits_{j = 1}^\nv\theta_{vj} v_j$ for the "neg-potential" function. The RBM model is parameterized by $\boldsymbol \theta$ containing two types of parameters, main effects and interaction effects. The main effects parameters ($\{\theta_{v_i}, \theta_{h_j}\}_{\substack{i = 1, \dots, \nv,\\j = 1, \dots, \nh}}$) weight the values of the visible $v_i$ and hidden $h_j$ nodes in probabilities (\@ref(eq:pmf)) and the interaction effect parameters ($\theta_{ij}$) weight the values of the connections $v_i h_j$, or dependencies, between hidden and visible layers.
 
@@ -200,7 +199,6 @@ $$
 P_\theta(V_i=1) \propto e^{\theta_{v_i}} \quad \text{ and } \quad P_\theta(H_j=1) \propto e^{\theta_{h_j}}, \quad  i=1,\ldots,\nv,j=1,\ldots,\nh
 $$
 so that, for example, $\text{logit}(P_\theta(V_i=1))=\theta_{v_i}$ (or $2 \theta_{v_i}$) under the coding $\mathcal{C}=\{0,1\}$ (or $\{-1,1\}$). Hence, these main effect parameters have a clear interpretation under an independence model (one with $\theta_{ij} = 0$) but this interpretation can break down as interaction parameters increase in magnitude relative to the size of the main effects. In such cases, the main effect parameters $\theta_{v_1}$ and $\theta_{h_j}$ are no longer interpretable as originally intended in the models (statements of marginal means) and the dependence parameters are so large as to dominate the entire model probability structure (also destroying the model interpretation of dependence as local conditional modifications of an overall marginal mean structure). To assess which parameter values $\boldsymbol \theta$ may cause difficulties in interpretation, we use the difference $\text{E}\left[\boldsymbol X | \boldsymbol \theta\right] - \text{E}\left[\boldsymbol X | \boldsymbol \theta^* \right]$ between two model expectations: E$\left[\boldsymbol X | \boldsymbol \theta\right]$ at $\boldsymbol \theta$ and expectations E$\left[\boldsymbol X | \boldsymbol \theta^* \right]$ where $\boldsymbol \theta^*$ matches $\boldsymbol \theta$ for all main effects but otherwise has $\theta_{ij} = 0$ for $i = 1, \dots, \nv, j = 1, \dots, \nh$. Hence, $\boldsymbol \theta^*$ and $\boldsymbol \theta$ have the same main effects but $\boldsymbol \theta^*$ has $0$ dependence parameters. Uninterpretability is then avoided at a parametric specification $\boldsymbol \theta$ if the model expected value at $\boldsymbol \theta$ is not very different from the corresponding model expectation under independence. Using this, it is possible to investigate what parametric conditions lead to uninterpretability in a model versus those that guarantee interpretable models. If $\text{E}\left[\boldsymbol X | \boldsymbol \theta\right] - \text{E}\left[\boldsymbol X | \boldsymbol \theta^*\right]$ is large, then the RBM model with parameter vector $\boldsymbol \theta$ is said to be uninterpetable. The quantities to compare in the RBM case are
-
 $$
 \text{E}\left[\boldsymbol X | \boldsymbol \theta\right] = \sum\limits_{\boldsymbol x \in \mathcal{C}^{\nv + \nh}} \boldsymbol x f_{\boldsymbol \theta}(\boldsymbol x) = \sum\limits_{\boldsymbol x \in \mathcal{C}^{\nv + \nh}} \boldsymbol x \frac{\exp\left(\sum\limits_{i = 1}^\nv \sum\limits_{j=1}^\nh \theta_{ij} v_i h_j + \sum\limits_{i = 1}^\nv\theta_{v_i} v_i + \sum\limits_{j = 1}^\nh\theta_{h_j} h_j\right)}{\sum\limits_{\boldsymbol x \in \mathcal{C}^{\nv + \nh}}\exp\left(\sum\limits_{i = 1}^\nv \sum\limits_{j=1}^\nh \theta_{ij} v_i h_j + \sum\limits_{i = 1}^\nv\theta_{v_i} v_i + \sum\limits_{j = 1}^\nh\theta_{h_j} h_j\right)}
 $$
@@ -228,7 +226,9 @@ To illustrate the ideas of model near-degeneracy, instability, and uninterpretab
 #### Impropriety three ways 
 
 For this small model, we are able to investigate the symptoms of model impropriety, beginning with near-degeneracy. To this end, recall from Section \@ref(near-degeneracy) that one characterization requires consideration of the convex hull of possible values of statistics $\boldsymbol t(\boldsymbol x)$,
-$$\mathcal{T} = \{\boldsymbol t(\boldsymbol x): \boldsymbol x = (v_1, h_1) \in \{0,1\}^2\} \equiv \{(v_1, h_1, v_1 h_1): v_1, h_1 \in \{0,1\}\}$$ 
+$$
+\mathcal{T} = \{\boldsymbol t(\boldsymbol x): \boldsymbol x = (v_1, h_1) \in \{0,1\}^2\} \equiv \{(v_1, h_1, v_1 h_1): v_1, h_1 \in \{0,1\}\}
+$$ 
 appearing in the RBM probabilities for this model. As this set is in three dimensions, we are able to explicitly illustrate the shape of boundary of the convex hull of $\mathcal{T}$ and explore the behavior of the mean vector $\boldsymbol \mu(\boldsymbol \theta) = \text{E}_{\boldsymbol \theta} \boldsymbol t(\boldsymbol x)$ as a function of the parameter vector $\boldsymbol \theta$. Figure \@ref(fig:toyhull) shows the convex hull of our "statistic space," $\mathcal{T} \subset \{0,1\}^3$, for this toy problem from two perspectives (enclosed by the unit cube $[0,1]^3$, the convex hull of $\{0,1\}^3$). In this small model, note that the convex hull of $\mathcal{T}$ does not fill the unrestricted hull of $\{0,1\}^3$ because of the relationship between the elements of $\mathcal{T} = \{(v_1, h_1, v_1 h_1 : v_1, h_1 \in \{0, 1\} \}$ (i.e. $v_1 h_1 = 1$ only if $v_1 = h_1 = 1$).
 
 ```{r models}
@@ -304,7 +304,6 @@ expand.grid(theta_h1 = seq(-5, 5, length.out = 21),
 ```
 
 Secondly, we can look at $\text{ELPR}(\boldsymbol \theta)$ from (\@ref(eq:elpr)) for this tiny model in order to consider model instability as a function of RBM parameters. Recall that large values of $\text{ELPR}(\boldsymbol \theta)$ are associated with an extreme sensitivity of the model probabilities $f_{\boldsymbol \theta}(\boldsymbol x)$ to small changes in $\boldsymbol x$ (see Proposition \@ref(prp:instab1)). The quantity $\text{ELPR}(\boldsymbol \theta)$ for this small RBM is 
-
 \begin{align*}
 \text{ELPR}(\boldsymbol \theta) &= \log \left[\frac{\max\limits_{(v_1, \dots, v_\nv) \in \mathcal{C}^\nv}P_{\boldsymbol \theta_\nv}(v_1, \dots, v_\nv)}{\min\limits_{(v_1, \dots, v_\nv) \in \mathcal{C}^\nv}P_{\boldsymbol \theta_\nv}(v_1, \dots, v_\nv)}\right] = \log \left[\frac{\max\limits_{v_1 \in \mathcal{C}}\sum\limits_{h_1 \in \mathcal{C}}\exp\left\{\theta_{11} h_1 v_1 + \theta_{h_1}h_1 + \theta_{v_1} v_1 \right\}}{\min\limits_{v_1 \in \mathcal{C}}\sum\limits_{h_1 \in \mathcal{C}}\exp\left\{\theta_{11} h_1 v_1 + \theta_{h_1}h_1 + \theta_{v_1} v_1 \right\}}\right]. \\
 \end{align*}
@@ -337,7 +336,6 @@ expand.grid(theta_h1 = seq(-5, 5, length.out = 21),
 ```
 
 Finally to consider the effect of $\boldsymbol \theta$ on potential model uninterpretability, we can look at the difference between model expectations, E$\left[\boldsymbol X | \boldsymbol \theta\right]$, and expectations given independence, E$\left[\boldsymbol X | \boldsymbol \theta^*\right ]$ for the tiny toy RBM model where $\boldsymbol X = (V_1, H_1, V_1 H_1)$. This difference is given by
-
 \begin{align*}
 \text{E}\left[\boldsymbol X | \boldsymbol \theta\right] -   \text{E}\left[\boldsymbol X | \boldsymbol \theta^* \right] 
 &= \left[
@@ -697,7 +695,7 @@ Alternatively, if exactly one specified cell probability in (\@ref(eq:0)) is zer
 \end{equation}  
 If exactly two specified probabilities in (\@ref(eq:0)) are zero, say  $p_{(1,1)}$ and $p_{(-1,1)}$ (without loss of generality), then a limit approximation as in (\@ref(eq:2)) follows by picking $\theta_{v_1}$ as above based on any choices of $(\theta_{h_1}, \Delta_1,\Delta_2)$ and choosing  a sequence of $\theta_{v_2}\equiv \theta_{v_2}^{(m)}$ values for which $\theta_{v_2}^{({m})} \rightarrow -\infty$.
 
-The previous discussion illustrates the fact that the RBM model class suffers from parameter identifiability issues that go beyond mere symmetries in the parametrization. Not only it is possible to approximate any distribution on the visibles arbitrarily well [cf. @montufar2011refinements], but quite different parameter settings can induce the same essential RBM model. However, this is not the most disastrous implication of the RBM parameterization. A far worse consequence is that, when fitting the RBM model by likelihood-based methods, we already know the nature of the answer before we begin: namely, such  fitting will simply aim to reproduce the empirical distribution from the training data if sufficiently many hiddens are in the model. That is, based on a random sample of vectors of visible variables, the model for the cell probabilities that has the highest likelihood over  *all possible model classes* (i.e., RBM-based or not) is the empirical distribution, and the over-parametrization of the RBM model itself ensures that this empirical distribution can be arbitrarily well-approximated.
+The previous discussion illustrates the fact that the RBM model class suffers from parameter identifiability issues that go beyond mere symmetries in the parameterization. Not only it is possible to approximate any distribution on the visibles arbitrarily well [cf. @montufar2011refinements], but quite different parameter settings can induce the same essential RBM model. However, this is not the most disastrous implication of the RBM parameterization. A far worse consequence is that, when fitting the RBM model by likelihood-based methods, we already know the nature of the answer before we begin: namely, such  fitting will simply aim to reproduce the empirical distribution from the training data if sufficiently many hiddens are in the model. That is, based on a random sample of vectors of visible variables, the model for the cell probabilities that has the highest likelihood over  *all possible model classes* (i.e., RBM-based or not) is the empirical distribution, and the over-parameterization of the RBM model itself ensures that this empirical distribution can be arbitrarily well-approximated.
 
 For illustration, continue the simple example from above with $n$ iid observations, each consisting of two realized visibles $(V_1,V_2)$.  In which case, when the specified cell probabilities $p_{(-1,-1)},p_{(1,-1)}, p_{(-1,1)},p_{(1,1)}$ in (\@ref(eq:0)) are taken as the empirical cell frequencies from the sample, there is no better model based on maximum likelihood, and the discussion above (cf. (\@ref(eq:2))) shows that RBM model parameters can be chosen to re-create this empirical distribution to an arbitrarily close degree. Hence, RBM model fitting based on ML will simply seek to reproduce the empirical distribution. What's more, whenever this empirical distribution contains empty cells, fitting steps for the RBM model will necessarily aim to choose parameters that necessarily diverge to infinity in magnitude in order to zero-out the corresponding RBM cell probabilities. In data applications with a large sample space, it is unlikely that the training set will include at least one of each possible vector outcome (unlike this small example). This implies that some RBM model parameters must diverge to $+\infty$ to mimic the empirical distribution with empty cells and, as we have already discussed in Section \@ref(explorations-of-model-properties-through-simulation), large magnitudes of $\boldsymbol \theta$ lead to model impropriety in the RBM. 
 
@@ -759,9 +757,7 @@ We considered a test case with $\nv = \nh = 4$ and parameters given in Table \@r
     \begin{align*}
     \pi(\boldsymbol \theta) \propto \gamma(\boldsymbol \theta)^n \exp\left(-\frac{1}{2C_{1}}\boldsymbol \theta_{main}'\boldsymbol \theta_{main} -\frac{1}{2C_{2}}\boldsymbol \theta_{interaction}'\boldsymbol \theta_{interaction}\right), \vspace{-.75cm}
     \end{align*}
-    
     where 
-    
     \begin{align*}
     \gamma(\boldsymbol \theta) = \sum\limits_{\boldsymbol x \in \mathcal{C}^{\nh + \nv}}\exp\left(\sum\limits_{i = 1}^\nv\sum\limits_{j=1}^\nh \theta_{ij} v_i h_j + \sum\limits_{i = 1}^V\theta_{v_i} v_i + \sum\limits_{j = 1}^\nh\theta_{h_j} h_j\right) \text{ and } C_{2} < C_{1}
     \end{align*}
@@ -921,7 +917,6 @@ marginal_means %>%
 ```
 
 Secondly, we can assess the mixing of our chains using an idea of effective sample size. If the MCMC chain were truly iid draws from the target distribution, then for the parameter $p^{(i)}$ denoting the probability of the $i$th vector outcome for the four visibles $\mathbf{v}=(v_1,v_2,v_3,v_4)\in\{\pm 1\}^4$, $i=1,\ldots,16$, its estimate as the average $\bar{p}^{(i)}$ of posterior sample versions would be approximately Normal with mean the true posterior marginal probability of $p^{(i)}$, and variance $\sigma^2_i/M$, where $\sigma^2_i$ is the true posterior variance of $p^{(i)}$ and $M$ is the length of the chain. However, with the presence of correlation in our chain, the asymptotic variance of $\bar{p}^{(i)}$ is instead approximately some $C_i/M$, where $C_i$ is some positive constant such that $C_i > \sigma^2_i$. We can use an overlapping block-means approach [@gelman2011inference] to get a crude estimate for $C_i$ as $\hat{C}_i = bS_b^2$, where $S_b^2$  denotes the sample variance of overlapping block means $\{\bar{p}_j^{(i)}=\sum_{k=j}^{j+b-1} p_k^{(i)}/b\}_{j=1}^{M-b+1}$ of length $b$ computed from the posterior samples $\{p_k^{(i)}\}_{k=1}^M$. We compare it to an estimate of $\sigma^2_i$ using sample variance $\hat{\sigma}^2_i$ of the raw chain, $\{p_k^{(i)}\}_{k=1}^{M}$. Formally, we approximate the effective sample size of the length $M$ MCMC chain as 
-
 $$
 M_{eff}^{(i)} = M\frac{\hat{\sigma}^2_i}{\hat{C}_i}.
 $$

@@ -7,7 +7,7 @@ to be submitted to the *Journal of the American Statistical Association*
 ```
 
 ```{block, type='paperauthor_', echo=TRUE}
-Andee Kaplan, Daniel Nordman, and Stephen Vardeman
+Andee Kaplan, Daniel J. Nordman, and Stephen B. Vardeman
 ```
 
 ## Abstract {-}
@@ -55,7 +55,6 @@ The probability mass function for the visible variables $X_1, \dots, X_N$ follow
 $$
 P_{\boldsymbol \theta_N} (\boldsymbol x) = \sum\limits_{\boldsymbol h \in \mathcal{X}^{N_H}} P_{\boldsymbol \theta_N} (\boldsymbol x, \boldsymbol h), \qquad \boldsymbol x \in \mathcal{X}^N.
 $$
-
 Note that the vector of model parameters $\boldsymbol \theta_N$, of size $q(N)$, grows in size as a function of sample dimension $N$ to accommodate the dimension of visible variables $X_1, \dots, X_N$, and one may further choose the number $N_H$ of hidden variables to change with $N$ as well; in particular, the number $N_H$ of hiddens may also potentially increase with $N$. Additionally, as $|\mathcal{X}| = 2$ and $P_{\boldsymbol \theta_N}(\boldsymbol x) > 0$ for all $\boldsymbol x \in \mathcal{X}^N$, the RBM model specification for visibles is a FSFS model. This example also indicates that models formed by marginalizing a base FSFS model (e.g., a type of exponential family model) is again a FSFS model class.
 
 ### Deep learning
@@ -76,7 +75,6 @@ The probability mass function for the visible random variables $X_1, \dots, X_N$
 $$
 P_{\boldsymbol \theta_N} (\boldsymbol x) = \sum\limits_{(\boldsymbol h^{(1)}, \dots, \boldsymbol h^{(M)}) \in \mathcal{X}^{N_{(H,1)} + \cdots + N_{(H,M)}}} P_{\boldsymbol \theta_N} (\tilde{\boldsymbol x}), \qquad \boldsymbol x \in \mathcal{X}^N
 $$
-
 Again like the RBM case, the visible DBM model specification is an example of a FSFS model.
 
 **Deep belief network (DBN).** A DBN resembles a DBM in that there are multiple layers of latent random variables stacked in a deep architecture with no conditional dependence between layers. The difference between the DBM and DBN models is that all but the last stacked layer in a DBN are Bayesian networks [see @pearl985bayesian], rather than RBMs. Thus for visibles $X_1, \dots, X_N$ with support $\mathcal{X}^N$, a DBN is also a FSFS model if the number $q(N)$ of components in the parameter vector is dependent on the dimension of the visibles. Commonly, as in logistic belief nets [@neal1992connectionist], a "weight" parameter is placed on each interaction between visibles, $X_1, \dots, X_N$ and the first layer of latent variables, $H^{(1)}_1, \dots, H^{(1)}_{N_{(H,1)}}$, satisfying the definition of a FSFS model.
@@ -87,7 +85,6 @@ To define or measure instability in FSFS models, it is useful to consider the be
 \begin{align}
 \frac{1}{N} \log \left[\frac{\max\limits_{(x_1, \dots, x_N) \in \mathcal{X}^N}P_{\boldsymbol \theta_N}(x_1, \dots, x_N)}{\min\limits_{(x_1, \dots, x_N) \in \mathcal{X}^N}P_{\boldsymbol \theta_N}(x_1, \dots, x_N)}\right] \equiv \frac{1}{N} \text{ELPR}_N(\boldsymbol \theta_N). (\#eq:elpr)
 \end{align}
-
 
 The main idea is that, in formulating FSFS models for potentially increasing numbers of variables (i.e., for $N \rightarrow \infty$), the ratio (\@ref(eq:elpr)) should remain bounded, requiring that the largest probability possible under $P_{\theta_N}$ should maintain a fixed order of magnitude relative to the smallest probability allowed under the same model. Specifically, the log of the ratio should grow at mostly linearly with the sample size $N$. This leads to the following definition.
 

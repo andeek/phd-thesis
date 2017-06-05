@@ -19,7 +19,6 @@ For the RBM$(m,n,\bm{\theta})$ model, consider in the function $\bm{g}: \mathbb{
 \end{align*}
 for $\bm{\theta}\in \mathbb{R}^{m+n+mn}$; above $\mathcal{I} \equiv \{\bm{g}(\bm{\theta}) : \bm{\theta}\in \mathbb{R}^{m+n+mn}\}$ denotes the image of the mapping.
 
-
 We have the following properties:
 
 - The function $\bm{g}: \mathbb{R}^{m+n+mn} \rightarrow \mathcal{I}$ is one-to-one; see Theorem \@ref(thm:one) below. Hence, these moments uniquely characterize the parameters in the RBM$(m,n,\bm{\theta})$ model.
@@ -97,7 +96,6 @@ under two probability distributions $P_1$ and $P_2$. Let $\E_i$ denote expectati
 1. $\E_1 X = \E_2 X$, $\E_1 Y = \E_2 Y$, $\E_1 X Y = \E_2 X Y$, where $\E_i$ denotes expectation under $P_i$, $i=1,2$.
 2. $P_1(X=x,Y=y)=P_2(X=x,Y=y)$ for $x,y\in\{a,b\}$, i.e., $(X,Y)$ has the same distribution under $P_1$ and $P_2$.
 
-\end{enumerate}
 ```
 
 ```{proof, echo=TRUE}

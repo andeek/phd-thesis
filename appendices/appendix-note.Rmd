@@ -18,6 +18,6 @@ From the lower bound on $P_{\boldsymbol \theta_N}(M_{\epsilon, \boldsymbol \thet
 \frac{1}{N}\log\left[\frac{P_{\boldsymbol \theta_N}(M_{\epsilon, \boldsymbol \theta_N})}{1-P_{\boldsymbol \theta_N}(M_{\epsilon, \boldsymbol \theta_N})}\right] & \ge \frac{1}{N} \log\left[\frac{P_{\boldsymbol\theta_N}(\boldsymbol x_{max})}{(|\mathcal{X}|^N)[P_{\boldsymbol \theta_N}(\boldsymbol x_{max})]^{1-\epsilon}[P_{\boldsymbol \theta_N}(\boldsymbol x_{min})]^{\epsilon}}\right] \\
 &= \frac{\epsilon}{N} \log\left[\frac{P_{\boldsymbol \theta_N}(\boldsymbol x_{max})}{P_{\boldsymbol \theta_N}(\boldsymbol x_{min})}\right] - \log |\mathcal{X}| \rightarrow \infty
 \end{align*}
-as $N \rightarrow \infty$ by the definition of an unstable FSFS model (c.f. Definition \@ref(def:instabFSFS)). Consequently, $P_{\boldsymbol \theta_N}(M_{\epsilon, \boldsymbol \theta_N}) \rightarrow 1$ as $N \rightarrow \infty$ as claimed. \hfill $\Box$
+as $N \rightarrow \infty$ by the definition of an unstable FSFS model (cf. Definition \@ref(def:instabFSFS)). Consequently, $P_{\boldsymbol \theta_N}(M_{\epsilon, \boldsymbol \theta_N}) \rightarrow 1$ as $N \rightarrow \infty$ as claimed. \hfill $\Box$
 
 ```
