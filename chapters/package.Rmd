@@ -42,6 +42,7 @@ $$
 $$
 with $*$'s above as the positions of neighbors. For a four-nearest neighbor model, the set of maximal concliques has $Q = 2$, as indicated in Figure \ref{fig:conc}. For comparison, an eight-nearest neighbor model will yield a set of maximal concliques containing $Q = 4$ concliques.
 
+
 ```{r concliques, eval=FALSE}
 library(conclique)
 
@@ -74,7 +75,7 @@ lattice <- lattice_4nn_torus(dimvec = c(N, N))
 grid <- assign_concliques(grid = grid, conclique_cover = concliques)
 ```
 
-```{r conc-plots, echo=FALSE, fig.width=3, echo=FALSE, fig.show='hold', out.width='49%', fig.cap='\\label{fig:conc}Minimal conclique cover for a given lattice of size $20\\times20$ using a four-nearest neighbors structure wrapped on a torus. This results in 2 concliques.'}
+```{r conc-plots, echo=FALSE, fig.width=3, echo=FALSE, fig.cap='\\label{fig:conc}Minimal conclique cover for a given lattice of size $20\\times20$ using a four-nearest neighbors structure wrapped on a torus. This results in 2 concliques.'}
 theme_blank <- function() {
   theme <- theme_bw()
   theme$line <- element_blank()
@@ -95,6 +96,7 @@ expand.grid(x = 1:N, y = 1:N) %>%
   theme_blank() +
   theme(aspect.ratio = 1)
 ```
+
 
 The `conclique` package comes with the convenience functions `lattice_4nn_torus`, `min_conclique_cover`, and `assign_concliques`, which create a four-nearest neighbor lattice structure of a given dimension $n \times n$ wrapped on a torus (in this case, $20\times20$), generate a minimal conclique cover, and assign the conclique labels to a grid, respectively. With these helper functions, one may set up a framework for our example for generating spatial data on a lattice.
 

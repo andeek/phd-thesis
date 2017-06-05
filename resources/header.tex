@@ -1,5 +1,5 @@
 \usepackage[toc,page]{appendix}
-\usepackage{tikz, subfig, multirow, float}
+\usepackage{tikz, subfig, multirow, float, enumerate, array, amsthm}
 \usepackage{tikz-3dplot}
 \usetikzlibrary{arrows, shapes, positioning}
 \usepackage{bm}
@@ -10,5 +10,26 @@
 \newcommand{\nv}{{n_{\scriptscriptstyle V}}}
 \newcommand{\nh}{{n_{\scriptscriptstyle H}}}
 \newcommand{\E}{E}
+
+
+\newtheorem{theorem}{Theorem}
+\newtheorem{lemma}{Lemma}
+
+\theoremstyle{definition}
+\newtheorem{definition}{Definition}
+\newtheorem{condition}{Condition}
+\newtheorem{assumption}{Assumption}
+\newtheorem{example}{Example}
+\newtheorem{proposition}{Proposition}
+ 
+\theoremstyle{remark}
+\newtheorem*{remark}{Remark}
+
+\newcommand{\hideFromPandoc}[1]{#1}
+\hideFromPandoc{
+    \let\Begin\begin
+    \let\End\end
+}
+
 
 

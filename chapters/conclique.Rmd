@@ -1,0 +1,963 @@
+# A FAST SAMPLER FOR DATA SIMULATION FROM SPATIAL, AND OTHER, MARKOV RANDOM FIELDS {#conc-chapter}
+
+```{block, type='paperinfo_', echo=TRUE}
+to be submitted to the *Journal of Graphical and Computational Statistics*
+```
+
+```{block, type='paperauthor_', echo=TRUE}
+Andee Kaplan, Mark S. Kaiser, Soumendra N. Lahiri, and Daniel Nordman
+```
+
+## Abstract {-}
+
+For spatial and network data, a model may be formulated on the basis of a Markov random field (MRF) structure and the specification of a conditional distribution for each observation. This piece-wise conditional approach often provides an attractive alternative to directly specifying a full joint data distribution, which may be difficult for large correlated data. At issue, fast simulation of data from such MRF models is often an important consideration, particularly when repeated generation of large numbers of data sets is required (e.g., for approximating reference distributions for statistics). However, the standard Gibbs strategy for simulating data from a spatial MRF models involves individual-site updates from conditional distributions, which is often challenging and computationally slow even for one complete iteration of relatively small sample size. As a remedy, we describe a fast way to simulate from MRF models, based on the concept of "concliques", (i.e., groups of non-neighboring observations).  The proposed simulation scheme is computationally fast due to its ability to lower the number of steps necessary to complete one iteration of a Gibbs sampler. We motivative the simulation method, formally establish its validity, and assess its computational performance through numerical studies, where speed advantages are shown. In addition to numerical evidence, we also formally prove that the proposed Gibbs sampler for simulating MRF data is geometrically ergodic (i.e., exhibits fast convergence rates) for simulating data from many commonly used spatial MRF models. Such general convergence results are typically unusual for spatial data generation but made possible here through the proposed sampling scheme. 
+
+```{r, echo=FALSE, message=FALSE}
+set.seed(1022)
+```
+
+## Introduction
+
+For modeling large-scale correlated data sets, conditionally specified models can often be usefully formulated on the basis of an underlying Markov random field structure [MRF; @besag1974spatial]. This approach involves specifying a full conditional distribution for each observation, which often depends functionally on other (neighboring) observations in the conditional model statement. Model formulation in this conditional, component-wise fashion can provide an attractive alternative to direct specification of a full joint data distribution, which may be difficult to approach for correlated data structures (e.g., spatial data). Such MRF models have become popular for modeling temporally- or spatially-dependent areal data [@cressie1993statistics], image segmentation [@zhang2001segmentation], computer vision [@li2012markov], and positron emission tomography [@higdon1998auxiliary], among other challenging applications including the analysis of networks [cf. @strauss1990pseudolikelihood; @hoff2002latent; @casleton2017local]. In addition to providing a route for model formulation, another reason for the popularity of MRF specifications is that observation-wise conditional distributions fit naturally with the Gibbs sampler [@geman1984stochastic] for generating data realizations via Markov chain Monte Carlo methods [MCMC; @gelfand1990sampling]. That is, a well-known close connection exists between MRF formulations and the Gibbs sampler through conditionally specified distributions; see @besag1994discussion and @kaiser2000construction.
+
+Accordingly, a dominant current strategy for sampling from a MRF model involves a single-site, or sequential, update strategy with a Gibbs sampler [@besag1991bayesian] whereby each observation in the field is simulated or updated individually, in turn, from its conditional distribution given all other current observational values. However, while simple to set up, sequential Gibbs updating can be inherently slow computationally as each complete Gibbs iteration requires the same number of updates as data points in the MRF model. Consequently, even for relatively small data sets (e.g., hundreds of spatial points), there can be substantial time investments in just one run of the standard Gibbs sampler. The computational burdens are then further compounded by multiple iterations of this sampler in order to create a large collection of simulated data sets, as potentially required for ensuring appropriate mixing of the sampler (i.e. burn-in) and for adequately establishing some Monte Carlo approximation of interest (e.g., numerically approximating the distribution of a statistic). Some block updating methods have been developed to speed up simulation from the Gaussian MRF model in particular [see @rue2001fast and @rue2005gaussian for an overview of relevant work] but these require manipulation of potentially large covariance matrices and, unlike the sequential Gibbs approach, usually have no clear extension to other MRF models.
+
+In this paper, we introduce a simple, fast scheme for sampling from general MRF models in a manner that exploits conditional independence under the MRF model  among subcollections of non-neighboring observations defined by "concliques." For goodness-of-fit testing of a spatial MRF specification, @kaiser2012goodness (hereafter [KLN]) introduced concliques as a  type of converse to "cliques," where the latter are commonly encountered with MRFs as sets of locations  involving shared neighbors [e.g., @hammersley1971markov]. [KLN] used concliques to develop spatial residuals and large-sample tests for the fit of MRF models. However, as a separate issue from assessing model formulation, the notion of concliques can also have alternative implications for the application of Gibbs sampling to MRFs. We show that this is indeed the case, using concliques to establish a formal approach to fast simulation from MRF models. The resulting simulation method is a block updating Gibbs sampler that applies to any valid conditionally specified MRF model under mild conditions. The proposed conclique-based approach has the advantage of being computationally more efficient than the sequential Gibbs update strategy, particularly for generating large collections of data sets, while maintaining similar rates of mixing. Similarly to the standard Gibbs sampler, the conclique-based strategy is also generally applicable compared to the simulation approaches for MRF models (cf. the end of this section). 
+
+In Section \ref{mrf-formulation-and-illustration} we present some background of MRF formulations and motivate simulation from such models with an example tied to spatial binary data. We describe concliques and the conclique-based Gibbs sampler for MRFs in Section \ref{conclique-based-gibbs-sampling-algorithms}, where the proposed simulation method is also formally validated under mild model conditions. Section \ref{simulation-comparisons} then provides a numerical comparison of the mixing and computational efficiency of the proposed sampling scheme to the standard (sequential) Gibbs sampler for MRFs, where substantial speed advantages are shown.
+
+Section \ref{ergodicity-results} then provides a theoretical development which indicates that the proposed MCMC sampler has guaranteed fast convergence rates to the target joint data distribution for many commonly used MRF models. That is, the conclique-based Gibbs sampler is proven to be geometrically ergodic for a large class of MRF models, which includes general four-nearest neighborhood structures. Not only does this guarantee a mixing rate for the involved Markov chain, but geometric ergodicity can be used other established results to obtain central limit theorems and Monte Carlo sample size assessments [@chan1994discussion; @jones2004markov; @hobert2002applicability; @roberts1997geometric]. The traditional sequential Gibbs sampling method for such spatial MRF models (or for other realistic MRFs for spatial data) cannot similarly be proven to be geometrically ergodic because current technology for generally establishing geometric ergodicity of a Gibbs sampler is limited to less than 4-components in the sampler, see, among others @johnson2015geometric; @hobert1998geometric; @tan2009block; @doss2010estimation; @jones2004sufficient; @johnson2015geometricergodicity. Hence, in addition to substantial computational speed-ups, the proposed conclique-based Gibbs sampler is shown to have useful theoretical properties for simulating spatial and other data.
+
+To frame the simulation method to follow, we end this section with a brief overview of other simulation approaches for MRF models.  While a joint data distribution, at least in theory, may be constructable from conditional distributions in a MRF specification, the normalizing terms involved are often intractable to determine in practice [cf. @kaiser2000construction]. For example, this holds true for the binary or autologistic models considered in Section \ref{illustrative-example} for illustration. Hence, direct simulation from the joint distribution induced by a MRF model also often becomes intractable, which motivates the traditional use of a sequential Gibbs sampler based on the observation-wise conditional distributions. To be clear, the proposed conclique-based Gibbs sampler to follow for simulating MRF data is meant to be computationally more efficient alternative to the standard Gibbs sampler. There are, however, simulation alternatives to Gibbs sampling altogether.
+  
+For example, through the use of coupling from the past [@propp1996exact], perfect sampling may also be employed to sample from a MRF specification [cf. @moller1999perfect]. For certain autologistic models, in particular, perfect sampling has received much consideration for simulating spatial binary data on a lattice [cf. @hughes2011autologistic; @hughes2014ngspatial; @friel2004likelihood]. But, due to the method's intricacies, perfect sampling does generally require more effort to set up than the Gibbs sampling considered here, as there is no exact rule for chain coupling. Additionally, justification of perfect sampling also imposes certain monotonicity requirements in arguments of conditional distributions [cf. @moller1999perfect] not required in Gibbs sampling. Furthermore, when considering Gaussian MRF models, we also note that several possibilities exist for data simulation, even perfectly, including versions of direct sampling and circulant embedding [@rue2001fast; @rue2005gaussian; @moller2003statistical; @davies2013circulant]. However, even for Gaussian MRF models, the simplicity of the Gibbs sampler is difficult to beat. Ultimately, for MRF specifications, Gibbs sampling plays as a natural and flexible role in simulation from a broad variety of (discrete or continuous) data structures on both regular (e.g. gridded spatial) and irregular (e.g. network data) lattices. To this end, the proposed conclique-based Gibbs sampler can offer substantial advantages in computational speed and efficiency over the traditional sequential Gibbs sampler, while maintaining the same general applicability in allowing accessible simulation for a wide variety of MRFs. This helps to expand the practical possibilities of simulation from large and complex MRF data structures.  
+
+## MRF formulation and illustration
+
+### MRF formulation
+
+We introduce some notation for MRF models, using a description typical in an applied spatial context for concreteness. Let $\{\boldsymbol s_i:i=1,\dots,n\}$ denote a set of locations, generically indexed in some Euclidean space (e.g. $\mathbb{R}^2$), and $\{Y(\boldsymbol s_i):i=1,\dots,n\}$ denote a corresponding collection of univariate random variables, where $Y(\boldsymbol s_i)$ represents an observation associated with location $\boldsymbol s_i$. A MRF formulation commonly involves specifying a neighborhood for each location $\boldsymbol s_i$, which consists of locations whereby the full conditional distribution of $Y(\boldsymbol s_i)$ is functionally dependent on observations at these locations. Let $f_i$ denote the condition density (or mass) function of $Y(\boldsymbol s_i)$ given all other observations $\{Y(\boldsymbol s_j)=y(\boldsymbol s_j): j \neq i\}$. Additionally, let $\mathcal{N}_i \equiv \{ \boldsymbol s_j: i \neq j \text{ and } f_i \text{ depends functionally on } y(\boldsymbol s_j)\}$ represent the neighborhood for location $\boldsymbol s_i$ and state a corresponding set of neighborhood observations as $\boldsymbol y(\mathcal{N}_i)\equiv \{y(\boldsymbol s_j):\boldsymbol s_j \in\mathcal{N}_i\}$. Under a defining MRF assumption, it holds that 
+\begin{equation}
+\label{eqn:1}
+f_i(y(\boldsymbol s_i)| \{y(\boldsymbol s_j): j \neq i\}) = f_i(y(\boldsymbol s_i)| \boldsymbol y(\mathcal{N}_i)),
+\end{equation}
+or the full conditional distribution for $Y(\boldsymbol s_i)$, given all other data values, depends only on those observations $\boldsymbol y(\mathcal{N}_i)$ given by the neighborhood $\mathcal{N}_i$. The data model follows by prescribing a conditional density (\ref{eqn:1}) for each observation $i=1,\dots,n$, which allows for a wide variety of models in construction. Random variables may be discrete or continuous, neighborhoods may or may not vary in size across locations, and the conditional distribution $f_i$ can include parameters $\boldsymbol \theta$ or spatial covariates with a form that can potentially depend on the location. One common example of conditional densities in a MRF specification (\ref{eqn:1}) involves an exponential family of the form given by
+
+\begin{equation}
+\label{eqn:2}
+f_i(y(\boldsymbol s_i)|\boldsymbol y(\mathcal{N}_i), \boldsymbol \theta) = \exp\left[A_{i}(\boldsymbol y(\mathcal{N}_i))y(\boldsymbol s_i) - B_i(\boldsymbol y(\mathcal{N}_i)) + C(y(\boldsymbol s_i))\right]
+\end{equation}
+
+where $A_{i}(\cdot)$ are the natural parameter functions, $B_i(\cdot)$ is a function of $\boldsymbol y(\mathcal(N)_i)$ only through the $A_{i}(\cdot)$, and $C(\cdot)$ is a known function. Under an assumption of pairwise dependence (or cliques of at most size two), @besag1974spatial showed a necessary form for $A_{i}(\cdot)$ is
+$$
+A_i(\boldsymbol y(\mathcal{N}_i)) = \alpha_i + \sum\limits_{\boldsymbol s_j \in \mathcal{N}_i} \eta_{i,j}y(\boldsymbol s_j)
+$$
+with a parameter $\alpha_i \in \mathbb{R}$ and dependence parameters $\eta_{i,j}=\eta_{j,i}$. @lee2001multiway generalized this parameterization result for including cliques of any size in potential neighborhood formulations, while
+@kaiser2012centered extended Besag's original work to a centered version of the parameterization given by  
+$$
+A_i(\boldsymbol y(\mathcal{N}_i)) = \tau^{-1}(\kappa_i) + \sum\limits_{\boldsymbol s_j \in \mathcal{N}_i} \eta_{i,j}\{y(\boldsymbol s_j) - \kappa_j\}
+$$
+where $\eta_{i,j} = \eta{j,i}$ again represents the dependence parameters in the model while $\kappa_i$ denotes a large scale parameter associated with a function $\tau^{-1}(\cdot)$ that maps expected values to natural parameters. The centered version is intended to clarify interpretation of dependence effects in the model as well as to facilitate the interpretation of $\kappa_i$ as an unconditional mean, with appropriate dependence parameters; see also @kaiser2007statistical. @hardouin2008multi, and @kaiser2009exploring.
+
+A common conditional density form for all observation ($f_i = f$ for all $i$) is often assumed with such models. One simple example of such an exponential family MRF model is a conditional Gaussian model with density
+\begin{equation}
+\label{eqn:3}
+f_i(y(\boldsymbol s_i)|\boldsymbol y(\mathcal{N}_i), \alpha, \eta, \tau) = \frac{1}{\sqrt{2\pi}\tau}\exp\left(-\frac{[y(\boldsymbol s_i) - \mu(\boldsymbol s_i)]^2}{2\tau^2}\right), \quad y(\boldsymbol s_i) \in \mathbb{R}
+\end{equation}
+determined by variance $\tau^2>0$ and conditional mean
+$$
+\mu(\boldsymbol s_i) = \alpha + \eta\sum\limits_{\boldsymbol s_j \in \mathcal{N}_i}\{y(\boldsymbol s_j) - \alpha\}
+$$
+where $\eta$ is a single dependence parameter (e.g $|\eta|<0.25$) and $\alpha \in \mathbb{R}$ represents an unconditional mean. Another example is a centered version of an autologistic model where $Y(\boldsymbol s_i)$ given neighbors $\boldsymbol y(\mathcal{N}_i)$ is Bernoulli($p(\boldsymbol s_i, \kappa, \eta)$) distributed with
+$$
+\text{logit}(p(\boldsymbol s_i, \kappa, \eta)) = \text{logit}(\kappa) + \eta\sum\limits_{\boldsymbol s_j \in \mathcal{N}_i}\{y(\boldsymbol s_j) - \kappa\}.
+$$
+depending on a large scale (i.e. unconditional mean) parameter $\kappa \in (0,1)$ and dependence parameter $\eta \in \mathbb{R}$.
+
+Hence, dependence enters such models through scaling of sums of (mean centered) neighboring values, whereby dependence parameters of zero induce a model form which would standardly be used under and independence assumption. For spatial data modeling, two standard neighboring structures are four- and eight-nearest neighbors. More specifically, for observations on a lattice, a four-nearest neighborhood is defined by locations in cardinal directions as $\mathcal{N}_i = \{\boldsymbol s_i \pm (0, 1)\} \bigcup \{\boldsymbol s_i \pm (1, 0)\}$, while the eight-nearest neighbor neighborhood $\mathcal{N}_i = \{\boldsymbol s_i \pm (0, 1)\} \bigcup \{\boldsymbol s_i \pm (1, 0)\} \bigcup \{\boldsymbol s_i \pm (1, -1)\} \bigcup \{\boldsymbol s_i \pm (1, 1)\}$, further includes neighboring diagonal A visual representation of these two structures is presented below, where $*$ represent neighbors of $\boldsymbol s_i$ and $\cdot$ represent non-neighbors in the lattice.
+
+
+\noindent\begin{minipage}{.49\linewidth}
+\centering
+four-nearest
+$$
+\begin{array}{ccc}
+\cdot&*&\cdot\\
+*&\boldsymbol s_i&*\\
+\cdot&*&\cdot\\
+\end{array}
+$$
+\end{minipage}
+\begin{minipage}{.49\linewidth}
+\centering
+eight-nearest
+\begin{align}
+\begin{array}{ccc}
+*&*&*\\
+*&\boldsymbol s_i&*\\
+*&*&*\\
+\end{array}
+\label{eqn:neighbor}
+\end{align}
+\end{minipage}
+We will often assume that a valid joint distribution for $\{Y(\boldsymbol s_i), \dots, Y(\boldsymbol s_n)\}$ exists from the conditionals specified (\ref{eqn:1}). @arnold2001conditionally provide conditions necessary for this, while @kaiser2000construction describe the construction of conditionals under conditions which guarantee a valid joint distribution. While we again use a model formulation framed toward spatial data, note that the same MRF elements translate to other non-spatial data settings (e.g., for network or random graph data, "locations" $\boldsymbol s_i$ may mark or denote the position of a potential edge while $Y(\boldsymbol s_i)$ may represent the presence/absence of the edge).
+
+### Illustrative example
+
+```{r endive-data}
+data(besag.endive)
+endive <- besag.endive
+m <- max(endive$row)
+n <- max(endive$col)
+```
+
+To motivate the simulation approach to follow, we first present a small example of how simulation from MRF models may arise and be required in practice. For this, we consider a spatial dataset from @besag1977some consisting of binary observations located on a $14\times 179$ indicating the presence or absence of footrot in endive plants. \ref{fig:endive-data-plot} shows the endive data where black pixels indicate a value of 1, or presence of the disease. As illustration, we consider fitting three models of increasing complexity to these data via pseudo-likelihood [@besag1975statistical] and apply simulation to obtain reference distributions for statistics based on the resulting estimators.  As this involves a type of parametric bootstrap approximation for sampling distributions, the speed of the proposed sampler becomes an important consideration in swiftly rendering a large 
+number of spatial data sets from differing models.      
+
+```{r endive-data-plot, fig.cap=paste("\\label{fig:endive-data-plot}The endive dataset, a", m, "$\\times$", n, "rectangular lattice with binary data encoding the presence or absence of footrot in endive plants from Besag (1977)."), fig.height=1.75}
+ggplot(endive, aes(col, row, fill = disease)) +
+  geom_tile() +
+  scale_fill_manual("Disease present", values = c("grey80", "black")) +
+  xlab("Column") + ylab("Row")
+
+# encode
+endive$disease <- ifelse(endive$disease == "Y", 1, 0)
+```
+
+The three models we will considered for the spatial binary data  are (a) an isotropic centered autologistic model [@caragea2009autologistic; @besag1972nearest; @besag1977some], (b) a centered autologistic model with two dependence parameters, and (c) a centered autologistic model as in (b) but having large scale structure determined by regression on the horizontal coordinate $u_i$ of each spatial location $\boldsymbol s_i=(u_i,v_i)$. For each model, a four-nearest neighborhood is used (with natural adjustments for border observations) and the resulting conditional mass function has the form
+$$
+f_i(y(\boldsymbol s_i)| \boldsymbol y(\mathcal{N}_i), \boldsymbol \theta) =\frac{\exp[y(\boldsymbol s_i) A_i\{\boldsymbol y(\mathcal{N}_i)\}]}{ 1 +\exp[y(\boldsymbol s_i) A_i\{\boldsymbol y(\mathcal{N}_i)\}}, \quad y(\boldsymbol s_i)=0,1, 
+$$ 
+
+
+with natural parameter functions, $A_i\{\boldsymbol y(\mathcal{N}_i)\} \equiv A_i\{\boldsymbol y(\mathcal{N}_i)\}(\boldsymbol \theta)$ given in Table \ref{tab:natural-params}, which depend on a vector of model parameters that we denote generically as $\boldsymbol \theta$ for notational purposes; Table \ref{tab:natural-params} further describes the various model-wise parameters which, upon collection, would represent $\boldsymbol \theta$ here for a model.  
+
+Pseudo-likelihood again yields parameter estimates $\widehat{\boldsymbol \theta}$ for each of the three models. To calibrate confidence intervals based on $\widehat{\boldsymbol \theta}$ for a model, normal approximations are difficult to use because standard errors for such pseudo-likelihood estimators depend intricately on the underlying dependence among spatial observations, with no tractable form [cf. @guyon1982parameter].  Instead, simulation in the form of a model-based bootstrap may be applied to estimate the sampling distribution of $\widehat{\boldsymbol \theta}$.  Using the full conditional distributions given by the estimates $\widehat{\boldsymbol \theta}$, as a proxy for the unknown parameters $\boldsymbol \theta$, we generated 10,000 spatial samples for each binary MRF model based on the proposed Gibbs sampler (after a burn-in of 1,000 and thinning by a factor of 5 which were conservative selections by trace plots). Each simulated spatial dataset was of the same size as the endive data, so that resulting collection of simulated samples provides a set of re-creations of the original data under each model. A (bootstrap) parameter estimate, say  $\widehat{\boldsymbol \theta}^*$, is obtained from each generated spatial sample for a given model, and the resulting empirical distribution of bootstrap estimates across simulated data sets  approximates the sampling distribution of $\widehat{\boldsymbol \theta}$ (where, technically, the relationship between  $\widehat{\boldsymbol \theta}^*$ and  $\widehat{\boldsymbol \theta}$ in the bootstrap world aims to mimic that of $\widehat{\boldsymbol \theta}$ and  $\boldsymbol \theta$). As illustration, Figure \ref{fig:endive-param-plot} displays the sampling distributions for the pseudo-likelihood estimators of dependence parameters (e.g., $\eta$, $\eta_u$, $\eta_v$) in the three models, as estimated through bootstrap simulation.  From these distributional approximations, Table \ref{tab:endive-table} shows 95\% (percentile bootstrap) confidence intervals for all model parameters. The intervals suggest that spatial dependence is an significant aspect of Models (a) and (b), but that most of the explanatory power of Model (c) lies in the model's large scale structure as opposed to dependence. Hence, as in this data example, simulation from MRF models can be helpful for quantifying the uncertainty in parameter estimation, provided that the simulation can be conducted in a computationally fast and practical way. The latter is of interest in the simulation development presented in the next section.  
+
+\begin{table}[ht!]
+\centering
+\begin{tabular}{| p{2in} | p{4.5in} |}
+\hline
+Model &  Natural parameter function\\
+\hline
+(a) Isotropic centered autologistic model with with $kappa\in(0,1)$, $\eta\in\mathbb{R}$, and $\mathcal{N}_i =\{\boldsymbol s_i\pm (1,0),\boldsymbol s_i\pm (0,1)\}$  & $A_i\{\boldsymbol y(\mathcal{N}_i)\} = \log\left(\frac{\kappa}{1-\kappa}\right) + \eta\sum\limits_{\boldsymbol s_j \in \mathcal{N}_i}\{y(\boldsymbol s_j) - \kappa\}$ \newline \\
+(b) Centered autologistic model with $\kappa \in (0,1)$ and dependence parameters $\eta_u,\eta_v\in\mathbb{R}$ in horizontal/vertical directions with $\mathcal{N}_{u,i}=\{\boldsymbol s_i \pm (1,0)\}$, $\mathcal{N}_{v,i}=\{\boldsymbol s_i \pm (0,1)\}$ & $A_i\{\boldsymbol y(\mathcal{N}_i)\} = \log\left(\frac{\kappa}{1-\kappa}\right) + \eta_u\sum\limits_{\boldsymbol s_j \in N_{u,i}}\{y(\boldsymbol s_j) - \kappa\} + \eta_v\sum\limits_{\boldsymbol s_j \in N_{v,i}}\{y(\boldsymbol s_j) - \kappa\}$ \\
+(c) Centered autologistic model as in (b) with scale parameter $\kappa_i$ determined by logistic regression ($\beta_0,\beta_1\in\mathbb{R}$) on the horizontal coordinate $u_i$ of location $\boldsymbol s_i=(u_i,v_i)$ & {\begin{align*} A_i\{\boldsymbol y(\mathcal{N}_i)\} &= \log\left(\frac{\kappa_i}{1-\kappa_i}\right) + \eta_u\sum\limits_{\boldsymbol s_j \in N_{u,i}}\{y(\boldsymbol s_j) - \kappa_i\} + \eta_v\sum\limits_{\boldsymbol s_j \in N_{v,i}}\{y(\boldsymbol s_j) - \kappa_i\}, \\ \log\left(\frac{\kappa_i}{1-\kappa_i}\right) &= \beta_0 + \beta_1 u_i \end{align*}} \\
+\hline
+\end{tabular}
+\caption{Full conditional distributions of three binary MRF models for the endive data.}
+\label{tab:natural-params}
+\end{table}
+
+```{r endive-model-setup, cache=TRUE}
+#create concliques list -------------------------------
+concliques_4nn <- function(grid) {
+  concliques <- list()
+  concliques[[1]] <- grid[(row(grid) %% 2 == 1 & col(grid) %% 2 == 1) | (row(grid) %% 2 == 0 & col(grid) %% 2 == 0)]
+  concliques[[2]] <- grid[(row(grid) %% 2 == 0 & col(grid) %% 2 == 1) | (row(grid) %% 2 == 1 & col(grid) %% 2 == 0)]
+  class(concliques) <- "conclique_cover"
+  return(concliques)
+}
+
+#create grid, lattices, neighbors, concliques for MCMC ------------------
+grid <- matrix(1:(m*n), nrow = m)
+concliques <- concliques_4nn(grid)
+lattice <- lattice_4nn_torus(dimvec = c(m, n))
+neighbors_one_param <- get_neighbors(lattice)
+neighbors_two_param <- get_neighbors(lattice, TRUE, grid)
+inits <- matrix(rbinom(m*n, 1, .5), nrow = m)
+```
+```{r binary-functs}
+#custom functions -----------
+
+#pseudo likelihood fit for conditonal binary model (4 neighbors)
+fit_one_param <- function(data, neighbors, ...) {
+  ## sum of neighbors
+  neigh_sum <- rowSums(matrix(data[neighbors[[1]][,-1]], nrow = length(data)))
+  
+  ## fit logistic conditional model: the conditonal prob p of Y given 4 neighbor sum S
+  ## is logit(p) = logit(kappa) + eta*(S-4*kappa) or logit(p) = int + eta*S for int = logit(kappa)-4*eta*kappa
+  model <- glm(data ~ neigh_sum, family = binomial())
+  intercept <- as.numeric(model$coefficients[1])
+  eta <- as.numeric(model$coefficients[2])
+  
+  ## retrieve kappa from intercept and eta by finding root of g on (0,1)
+  g <- function(y, params) {
+    eta <- params$eta
+    intercept <- params$intercept
+    
+    return(log(y) - log(1 - y) - 4*y*eta - intercept)
+  }
+  kappa <- uniroot(g, c(0, 1), list(eta = eta, intercept = intercept))$root
+  
+  list(eta = eta, kappa = kappa)
+}
+fit_two_param <- function(data, neighbors, ...) {
+  ## sum of neighbors
+  neigh_sum <- do.call(cbind, lapply(neighbors, function(x) { 
+    rowSums(matrix(data[x[,-1]], nrow = length(data))) 
+    }))
+  
+  ## fit logistic conditional model: the conditonal prob p of Y given 4 neighbor sum S
+  ## is logit(p) = logit(kappa) + eta1*(S1-2*kappa) + eta2*(S2-2*kappa) or 
+  ## logit(p) = int + eta1*S1 + eta2*S2 for int = logit(kappa)-2*eta1*kappa - 2*eta2*kappa
+  model <- glm(data ~ neigh_sum, family = binomial())
+  intercept <- as.numeric(model$coefficients[1])
+  eta_1 <- as.numeric(model$coefficients[2])
+  eta_2 <- as.numeric(model$coefficients[3])
+  
+  ## retrieve kappa from intercept and eta by finding root of g on (0,1)
+  g <- function(y, params) {
+    eta_1 <- params$eta_1
+    eta_2 <- params$eta_2
+    intercept <- params$intercept
+    
+    return(log(y) - log(1 - y) - 2*y*eta_1 - 2*y*eta_2 - intercept)
+  }
+  kappa <- uniroot(g, c(0, 1), list(eta_1 = eta_1, eta_2 = eta_2, intercept = intercept))$root
+  
+  list(eta_1 = eta_1, eta_2 = eta_2, kappa = kappa)
+}
+fit_two_param_reg <- function(data, neighbors, params0, cols, ...) {
+  res <- list()
+  res$data <- data
+  res$u <- (0:(length(res$data) - 1)) %% cols + 1
+  res$nums <- lapply(neighbors, function(neigh) {
+    rowSums(!is.na(neigh[, -1]))
+  }) 
+  res$sums <- lapply(neighbors, function(neigh) {
+    rowSums(matrix(res$data[neigh[, -1]], ncol = ncol(neigh) - 1, byrow = TRUE))
+  }) 
+  
+  
+  #pseudo likelihood functions
+  logf <- function(params, data, fixed) {
+    u <- data$u
+    beta <- params
+    eta <- fixed
+    
+    reg <- beta[1] + beta[2]*u
+    kappa <- exp(reg)/(1 + exp(reg))
+    A <- reg + eta[1]*(data$sums[[1]] - data$nums[[1]]*kappa) + eta[2]*(data$sums[[2]] - data$nums[[2]]*kappa)
+    B <- log(1 + exp(A))
+    
+    sum(A*data$data - B)
+  }
+  grad <- function(params, data, fixed) {
+    u <- data$u
+    beta <- params
+    eta <- fixed
+    
+    reg <- beta[1] + beta[2]*u
+    kappa <- exp(reg)/(1 + exp(reg))
+    A <- reg + eta[1]*(data$sums[[1]] - data$nums[[1]]*kappa) + eta[2]*(data$sums[[2]] - data$nums[[2]]*kappa)
+    
+    dk_db0 <- exp(reg)/(1 + exp(reg))^2
+    dk_db1 <- u*dk_db0
+    dA_dk <- 1/kappa + 1/(1 - kappa) - 2*(eta[1] + eta[2])
+    dlogf_dA <- data$data
+    dlogf_dB <- -1
+    dB_dA <- exp(A)/(1 + exp(A))
+    
+    dlogf_b0 <- sum(dlogf_dA*dA_dk*dk_db0 + dlogf_dB*dB_dA*dA_dk*dk_db0)
+    dlogf_b1 <- sum(dlogf_dA*dA_dk*dk_db1 + dlogf_dB*dB_dA*dA_dk*dk_db1)
+    
+    c(dlogf_b0, dlogf_b1)
+  }
+  
+  beta0 <- c(params0$beta_0, params0$beta_1)
+  
+  ## fit logistic conditional model: the conditonal prob p of Y given 4 neighbor sum S
+  ## is logit(p) = logit(kappa) + eta1*(S1-2*kappa) + eta2*(S2-2*kappa) or 
+  ## logit(p) = int + eta1*S1 + eta2*S2 for int = logit(kappa)-2*eta1*kappa - 2*eta2*kappa
+  sums <- do.call(cbind, res$sums)
+  model <- glm(res$data ~ sums, family = binomial())
+  eta <- as.numeric(model$coefficients[-1])  
+  
+  ## pseudo likelihood for eta
+  plik <- optim(beta0, logf, gr = grad, data = res, fixed = eta, control = list(fnscale = -1))
+  beta <- as.numeric(plik$par)
+  
+  params <- list(beta_0 = beta[1], beta_1 = beta[2], eta_1 = eta[1], eta_2 = eta[2])
+  return(params)
+}
+
+#cdfs 
+cdf_one_param <- function(data, params) {
+  eta <- params$eta
+  kappa <- params$kappa
+  
+  mean_structure <- log(kappa) - log(1 - kappa) + eta*(data$sums[[1]] - data$nums[[1]]*kappa)
+  p <- exp(mean_structure)/(1 + exp(mean_structure))
+  vapply(seq_along(mean_structure), FUN = function(i) pbinom(data$data[i], 1, p[i]), FUN.VALUE = numeric(1))
+}
+cdf_two_param <- function(data, params) {
+  eta_1 <- params$eta_1
+  eta_2 <- params$eta_2
+  kappa <- params$kappa
+  
+  mean_structure <- log(kappa) - log(1 - kappa) + eta_1*(data$sums[[1]] - data$nums[[1]]*kappa) + eta_2*(data$sums[[2]] - data$nums[[2]]*kappa)
+  p <- exp(mean_structure)/(1 + exp(mean_structure))
+  vapply(seq_along(mean_structure), FUN = function(i) pbinom(data$data[i], 1, p[i]), FUN.VALUE = numeric(1))
+}
+cdf_two_param_reg <- function(data, params) {
+  eta_1 <- params$eta_1
+  eta_2 <- params$eta_2
+  beta_0 <- params$beta_0
+  beta_1 <- params$beta_1
+  
+  u <- data$u
+  reg <- beta_0 + beta_1*u
+  kappa <- exp(reg)/(1 + exp(reg))
+  
+  mean_structure <- reg + eta_1*(data$sums[[1]] - data$nums[[1]]*kappa) + eta_2*(data$sums[[2]] - data$nums[[2]]*kappa)
+  p <- exp(mean_structure)/(1 + exp(mean_structure))
+  vapply(seq_along(mean_structure), FUN = function(i) pbinom(data$data[i], 1, p[i]), FUN.VALUE = numeric(1))
+}
+
+#pmfs
+pmf_one_param <- function(data, params) {
+  eta <- params$eta
+  kappa <- params$kappa
+  
+  mean_structure <- log(kappa) - log(1 - kappa) + eta*(data$sums[[1]] - data$nums[[1]]*kappa)
+  p <- exp(mean_structure)/(1 + exp(mean_structure))
+  vapply(seq_along(mean_structure), FUN = function(i) dbinom(data$data[i], 1, p[i]), FUN.VALUE = numeric(1))
+}
+pmf_two_param <- function(data, params) {
+  eta_1 <- params$eta_1
+  eta_2 <- params$eta_2
+  kappa <- params$kappa
+  
+  mean_structure <- log(kappa) - log(1 - kappa) + eta_1*(data$sums[[1]] - data$nums[[1]]*kappa) + eta_2*(data$sums[[2]] - data$nums[[2]]*kappa)
+  p <- exp(mean_structure)/(1 + exp(mean_structure))
+  vapply(seq_along(mean_structure), FUN = function(i) dbinom(data$data[i], 1, p[i]), FUN.VALUE = numeric(1))
+}
+pmf_two_param_reg <- function(data, params) {
+  eta_1 <- params$eta_1
+  eta_2 <- params$eta_2
+  beta_0 <- params$beta_0
+  beta_1 <- params$beta_1
+  
+  u <- data$u
+  reg <- beta_0 + beta_1*u
+  kappa <- exp(reg)/(1 + exp(reg))
+  
+  mean_structure <- reg + eta_1*(data$sums[[1]] - data$nums[[1]]*kappa) + eta_2*(data$sums[[2]] - data$nums[[2]]*kappa)
+  p <- exp(mean_structure)/(1 + exp(mean_structure))
+  vapply(seq_along(mean_structure), FUN = function(i) dbinom(data$data[i], 1, p[i]), FUN.VALUE = numeric(1))
+}
+
+#samplers
+sampler_two_param_reg <- function(data, params) {
+  eta_1 <- params$eta_1
+  eta_2 <- params$eta_2
+  beta_0 <- params$beta_0
+  beta_1 <- params$beta_1
+  
+  u <- data$u
+  reg <- beta_0 + beta_1*u
+  kappa <- exp(reg)/(1 + exp(reg))
+  
+  mean_structure <- reg + eta_1*(data$sums[[1]] - data$nums[[1]]*kappa) + eta_2*(data$sums[[2]] - data$nums[[2]]*kappa)
+  vapply(exp(mean_structure)/(1 + exp(mean_structure)), FUN = function(p) rbinom(1, 1, p), FUN.VALUE = numeric(1))
+}
+```
+```{r bootstrap-setup}
+B <- 10000
+burnin <- 1000
+thin <- 5
+iter <- B*thin + burnin
+```
+```{r endive-boot-one, cache=TRUE}
+params_est_one_param <- fit_one_param(endive$disease, neighbors_one_param)
+
+y_star_one_param <- run_conclique_gibbs(concliques, neighbors_one_param, inits, "binary_single_param", params_est_one_param, iter)
+y_star_one_param <- y_star_one_param[(burnin:iter)[burnin:iter %% thin == 1], ]
+gof_stat_star_one_param <- rep(NA, B)
+params_star_one_param <- data.frame(eta = rep(NA, B), kappa = rep(NA, B))
+
+for(i in 1:B) {
+  dat_one_param <- y_star_one_param[i,]
+  params_star_one <- fit_one_param(dat_one_param, neighbors_one_param)
+  params_star_one_param[i, ] <- c(params_star_one$eta, params_star_one$kappa)
+  resids_star_one_param <- spatial_residuals(dat_one_param, neighbors_one_param, "cdf_one_param", params_star_one, discrete = "pmf_one_param")
+  gof_stat_star_one_param[i] <- gof_statistics(resids_star_one_param, concliques, "ks", "max")
+}
+
+resids_one_param <- spatial_residuals(endive$disease, neighbors_one_param, "cdf_one_param", params_est_one_param, discrete = "pmf_one_param")
+gof_stat_one_param <- gof_statistics(resids_one_param, concliques, "ks", "max")
+p_value_one_param <- (sum(gof_stat_star_one_param >= gof_stat_one_param) + 1)/(B + 1)
+```
+```{r endive-boot-two, cache=TRUE}
+
+params_est_two_param <- fit_two_param(endive$disease, neighbors_two_param)
+
+y_star_two_param <- run_conclique_gibbs(concliques, neighbors_two_param, inits, "binary_two_param", params_est_two_param, iter)
+y_star_two_param <- y_star_two_param[(burnin:iter)[burnin:iter %% thin == 1], ]
+gof_stat_star_two_param <- rep(NA, B)
+params_star_two_param <- data.frame(eta_1 = rep(NA, B), eta_2 = rep(NA, B), kappa = rep(NA, B))
+
+for(i in 1:B) {
+  dat_two_param <- y_star_two_param[i,]
+  params_star_two <- fit_two_param(dat_two_param, neighbors_two_param)
+  params_star_two_param[i, ] <- c(params_star_two$eta_1, params_star_two$eta_2, params_star_two$kappa)
+  resids_star_two_param <- spatial_residuals(dat_two_param, neighbors_two_param, "cdf_two_param", params_star_two, discrete = "pmf_two_param")
+  gof_stat_star_two_param[i] <- gof_statistics(resids_star_two_param, concliques, "ks", "max")
+}
+
+resids_two_param <- spatial_residuals(endive$disease, neighbors_two_param, "cdf_two_param", params_est_two_param, discrete = "pmf_two_param")
+gof_stat_two_param <- gof_statistics(resids_two_param, concliques, "ks", "max")
+p_value_two_param <- (sum(gof_stat_star_two_param >= gof_stat_two_param) + 1)/(B + 1)
+
+```
+```{r endive-boot-two-reg, cache=TRUE}
+params_est_two_param_reg <- fit_two_param_reg(endive$disease, neighbors_two_param,
+                                              list(eta_1 = 0, eta_2 = 0, beta_0 = 0, beta_1 = 0), n)
+
+y_star_two_param_reg <- run_conclique_gibbs(concliques, neighbors_two_param, inits, "sampler_two_param_reg", params_est_two_param_reg, iter)
+y_star_two_param_reg <- y_star_two_param_reg[(burnin:iter)[burnin:iter %% thin == 1], ]
+gof_stat_star_two_param_reg <- rep(NA, B)
+params_star_two_param_reg <- data.frame(eta_1 = rep(NA, B), eta_2 = rep(NA, B), beta_0 = rep(NA, B), beta_1 = rep(NA, B))
+
+for(i in 1:B) {
+  dat_two_param_reg <- y_star_two_param_reg[i,]
+  params_star_two_reg <- fit_two_param_reg(dat_two_param_reg, neighbors_two_param,
+                                           list(eta_1 = 0, eta_2 = 0, beta_0 = 0, beta_1 = 0), n)
+  params_star_two_param_reg[i, ] <- c(params_star_two_reg$eta_1, params_star_two_reg$eta_2, params_star_two_reg$beta_0, params_star_two_reg$beta_1)
+  resids_star_two_param_reg <- spatial_residuals(dat_two_param_reg, neighbors_two_param, "cdf_two_param_reg", params_star_two_reg, discrete = "pmf_two_param_reg", n)
+  gof_stat_star_two_param_reg[i] <- gof_statistics(resids_star_two_param_reg, concliques, "ks", "max")
+}
+
+resids_two_param_reg <- spatial_residuals(endive$disease, neighbors_two_param, "cdf_two_param_reg", params_est_two_param_reg, discrete = "pmf_two_param_reg", n)
+gof_stat_two_param_reg <- gof_statistics(resids_two_param_reg, concliques, "ks", "max")
+p_value_two_param_reg <- (sum(gof_stat_star_two_param_reg >= gof_stat_two_param_reg) + 1)/(B + 1)
+```
+
+
+```{r endive-table, results='asis'}
+endive_table0 <- data.frame(apply(params_star_one_param, 2, quantile, probs = c(.025, .5, .975)))
+colnames(endive_table0) <- c("$\\eta$", "$\\kappa$")
+
+endive_table1 <- data.frame(apply(params_star_two_param, 2, quantile, probs = c(.025, .5, .975)))
+colnames(endive_table1) <- c("$\\eta_u$", "$\\eta_v$", "$\\kappa$")
+
+endive_table2 <- data.frame(apply(params_star_two_param_reg, 2, quantile, probs = c(.025, .5, .975)))
+colnames(endive_table2) <- c("$\\eta_u$", "$\\eta_v$", "$\\beta_0$", "$\\beta_1$")
+rownames(endive_table2) <- paste0(unlist(strsplit(rownames(endive_table2), "%")), "\\%")
+
+endive_table0 %>%
+  bind_cols(endive_table1) %>%
+  bind_cols(endive_table2) -> endive_table_all
+rownames(endive_table_all) <- rownames(endive_table2)
+
+endive_table_all %>%
+  xtable(label = "tab:endive-table",
+         align = c("|", "l", "|", "r", "r", "|", "r", "r", "r", "|", "r", "r", "r", "r", "|"),
+         caption = "Bootstrap percentile confidence intervals in all three autologistic models.",
+         digits = 3) -> endive_table
+
+
+addtorow <- list()
+addtorow$pos <- list(-1)
+addtorow$command <- "\\hline &\\multicolumn{2}{|c|}{Model (a)} & \\multicolumn{3}{|c|}{Model (b)} & \\multicolumn{4}{|c|}{Model (c)} \\\\\n"
+  
+print(endive_table, add.to.row = addtorow, sanitize.text.function = function(x){x}, comment = FALSE)
+
+```
+
+
+```{r endive-param-plot, fig.height=1.75, fig.show="hold", fig.cap='\\label{fig:endive-param-plot}Sampling distribution of the dependence parameters ($\\eta$, $\\eta_u$, and $\\eta_v$) for the three centered autologistic models with four-nearest neighbor structure, (a) the isotropic model with one dependence parameter, (b) the model with two dependence parameters, and (c) the model with two dependence parameters and a marginal mean structure based on the regression on the horizontal location component, $u_i$.', out.width='100%'}
+# one param
+ggplot() +
+  geom_density(aes(params_star_one_param$eta), fill = "grey20", alpha = .5) +
+  geom_vline(aes(xintercept = params_est_one_param$eta), colour = "red") +
+  geom_text(aes(x = params_est_one_param$eta + diff(range(params_star_one_param$eta))/100,
+                y = max(density(params_star_one_param$eta)$y)*.75,
+                label = paste0("hat(eta) == " , round(params_est_one_param$eta, 4))),
+            family = "serif", hjust = 0, parse = TRUE) +
+  xlab("") +
+  ggtitle("(a)")
+
+# two param
+t(unlist(params_est_two_param)) %>%
+  data.frame() %>%
+  select(starts_with("eta")) %>%
+  rename(`eta[u]` = eta_1, `eta[v]` = eta_2) %>%
+  gather(param, value) -> ests_two_param
+  
+params_star_two_param %>%
+  select(starts_with("eta")) %>%
+  rename(`eta[u]` = eta_1, `eta[v]` = eta_2) %>%
+  gather(param, value) %>%
+  ggplot() +
+  geom_density(aes(value), fill = "grey20", alpha = .5) +
+  geom_vline(aes(xintercept = value), colour = "red", data = ests_two_param) +
+  geom_text(aes(x = value + diff(range(params_star_two_param$eta_1))/100,
+                y = max(density(params_star_two_param$eta_1)$y)*.75,
+                label = paste0("hat(eta) == " , round(value, 4))),
+            family = "serif", hjust = 0, parse = TRUE, data = ests_two_param) +
+  facet_wrap(~param, labeller = label_parsed) +
+  xlab("") +
+  ggtitle("(b)")
+
+# two param reg
+t(unlist(params_est_two_param_reg)) %>%
+  data.frame() %>%
+  select(starts_with("eta")) %>%
+  rename(`eta[u]` = eta_1, `eta[v]` = eta_2) %>%
+  gather(param, value) -> ests_two_param_reg
+  
+params_star_two_param_reg %>%
+  select(starts_with("eta")) %>%
+  rename(`eta[u]` = eta_1, `eta[v]` = eta_2) %>%
+  gather(param, value) %>%
+  ggplot() +
+  geom_density(aes(value), fill = "grey20", alpha = .5) +
+  geom_vline(aes(xintercept = value), colour = "red", data = ests_two_param_reg) +
+  geom_text(aes(x = value + diff(range(params_star_two_param_reg$eta_1))/100,
+                y = max(density(params_star_two_param_reg$eta_1)$y)*.75,
+                label = paste0("hat(eta) == " , round(value, 4))),
+            family = "serif", hjust = 0, parse = TRUE, data = ests_two_param_reg) +
+  facet_wrap(~param, labeller = label_parsed) +
+  xlab("") +
+  ggtitle("(c)")
+
+
+```
+
+As another example of MRF model-based simulation in inference, we also consider reference distributions for goodness-of-fit (GOF) model assessments for all three models. @besag2001markov assessed the fit of the isotropic autologistic model (Model (a)) using a Monte Carlo test and concluded that the model is a poor fit for these data. We repeat the assessment using a GOF test statistic $T(\widehat{\boldsymbol \theta})$ from [KLN], which is based on pseudo-estimates and suggests an inadequate model fit for large test statistic values according to large-sample theory developed in [KLN]. In order to approximate a reference distribution for testing, we use the collection of same bootstrap simulated data sets to evaluate test statistic analogs and compute p-values as reported in Table \ref{tab:endive-p-values}.  Our results support the lack-of-fit conclusion of @besag2001markov concerning the isotropic autologistic model (p-value=$`r round(p_value_one_param, 3)`$), though Models (b) and (c) are more compatible with these data (p-values=$`r round(p_value_two_param, 3)`$ and $`r round(p_value_two_param_reg, 4)`$ respectively) by adding directional model structure (e.g., in neighborhood or large scale parameters).  
+
+\begin{table}
+\centering
+\begin{tabular}{|l|rrr|}
+\hline
+& Model (a) & Model (b) & Model (c) \\
+\hline
+p-value & $`r round(p_value_one_param, 3)`$ & $`r round(p_value_two_param, 3)`$ & $`r round(p_value_two_param_reg, 3)`$ \\
+\hline
+\end{tabular}
+\caption{Bootstrap p-values for a goodness-of-fit (GOF) assessment of the three centered autologistic models with four-nearest neighbor structure, (a) the isotropic model with one dependence parameter, (b) the model with two dependence parameters, and (c) the model with two dependence parameters and a marginal mean structure based on the regression on the horizontal location component, $u_i$, fit to the endive data.}
+\label{tab:endive-p-values}
+\end{table}
+
+
+```{r endive-timing, cache=TRUE}
+time <- Sys.time()
+tmp <- run_conclique_gibbs(concliques, neighbors_one_param, inits, "binary_single_param", params_est_one_param, 100)
+conc_time_m0 <- difftime(Sys.time(), time, units = "secs")
+
+time <- Sys.time()
+tmp <- run_conclique_gibbs(concliques, neighbors_two_param, inits, "binary_two_param", params_est_two_param, 100)
+conc_time_m1 <- difftime(Sys.time(), time, units = "secs")
+
+time <- Sys.time()
+tmp <- run_conclique_gibbs(concliques, neighbors_two_param, inits, "sampler_two_param_reg", params_est_two_param_reg, 100)
+conc_time_m2 <- difftime(Sys.time(), time, units = "secs")
+
+time <- Sys.time()
+tmp <- run_sequential_gibbs(neighbors_one_param, inits, "binary_single_param", params_est_one_param, 100)
+seq_time_m0 <- difftime(Sys.time(), time, units = "secs")
+
+time <- Sys.time()
+tmp <- run_sequential_gibbs(neighbors_two_param, inits, "binary_two_param", params_est_two_param, 100)
+seq_time_m1 <- difftime(Sys.time(), time, units = "secs")
+
+time <- Sys.time()
+tmp <- run_sequential_gibbs(neighbors_two_param, inits, "sampler_two_param_reg", params_est_two_param_reg, 100)
+seq_time_m2 <- difftime(Sys.time(), time, units = "secs")
+```
+
+The simulations above were performed with the proposed (conclique-based) Gibbs sampler. Had we used the standard sequential Gibbs, the reported results would have been virtually identical with the same number of iterations. However, the generation of the reference distribution using the standard sampler would have taken approximately $`r round((seq_time_m0 - conc_time_m0)/100*B/60, 2)`$ minutes longer for Model (a), approximately $`r round((seq_time_m1 - conc_time_m1)/100*B/60, 2)`$ minutes longer for Model (b), and approximately $`r round((seq_time_m2 - conc_time_m2)/100*B/60, 2)`$ minutes longer for Model (c) compared to the proposed MRF sampler (which had running times of $`r round((conc_time_m0)/100*B, 2)`$ seconds, $`r round((conc_time_m1)/100*B, 2)`$ seconds, and $`r round((conc_time_m2)/100*B, 2)`$ seconds, respectively).
+
+```{r endive-sample-size}
+source("code/sample_size.R")
+
+ps <- c(.025, .975)
+C <- .9
+d <- .01
+sample_size_m0 <- vapply(ps, function(p) S.hat(params_star_one_param$eta, p, d, C), numeric(1))
+sample_size_m1 <- c(vapply(ps, function(p) S.hat(params_star_two_param$eta_1, p, d, C), numeric(1)),
+                    vapply(ps, function(p) S.hat(params_star_two_param$eta_2, p, d, C), numeric(1)))
+sample_size_m2 <- c(vapply(ps, function(p) S.hat(params_star_two_param_reg$eta_1, p, d, C), numeric(1)),
+                    vapply(ps, function(p) S.hat(params_star_two_param_reg$eta_2, p, d, C), numeric(1)))
+```
+
+These timings are based on C++ implementations of both samplers in `R` (@r-lang; available in an associated `R` package, `conclique`, to appear on CRAN) using a 1.7 GHz processor. Furthermore, the simulation studies above were based on $10,000$ data generations as a pragmatic choice for a number of sampling iterations that might be employed in practice. However, if, say, one wished to use enough Monte Carlo samples so that reported bootstrap confidence intervals would not change (or be guaranteed with some level of confidence) to second or third decimal place accuracy, then a data-based approach could further be used to estimate number of iterations required [cf. @raftery1992many]. For example, with the endive data and using the 10,000 simulated data sets for each model as a pilot collection, the sample size method of @liu2016number estimates that $`r comma(max(sample_size_m0))`$ sampling iterations would be needed for either the standard or proposed samplers to determine bootstrap confidence intervals for dependence parameters in Model (a) to the second decimal place with 90% confidence ($`r comma(max(sample_size_m1))`$ and $`r comma(max(sample_size_m2))`$ sizes in Models (b) and (c) respectively). For perspective, the time savings of the proposed sampler now becomes on the order of months compared to the standard Gibbs approach.
+
+## Conclique-based Gibbs sampling algorithms
+
+Recall that the MRF model involves specifying a conditional distribution $f_i$ for each observation $Y(\boldsymbol s_i)$ as in (\ref{eqn:1}), which depends on observations $y(\mathcal{N}_i)$ in an associated neighborhood $\mathcal{N}_i$ for location $\boldsymbol s_i$. From this model formulation, a *conclique* is defined by [KLN] as a singleton set or a set of locations such that no location in the set is a neighbor of any other location in the set. For any MRF specification, a collection of $Q$ concliques given by $\mathcal{C}_1, \dots, \mathcal{C}_Q$ can be found which partition the available spatial locations as $\cup_{i=1}^Q \mathcal{C}_i = \{\boldsymbol s_1,\ldots,\boldsymbol s_n\}$ with $\mathcal{C}_i \cap \mathcal{C}_j=\emptyset$ for $i\neq j$.
+
+For example, if we consider spatial data on a regular grid and the common four-nearest neighborhood structure as in (\ref{eqn:neighbor}), then it is possible to partition locations into two concliques, as labeled on the lattice below. 
+
+\noindent\begin{minipage}{.49\linewidth}
+\centering
+four-nearest
+$$
+\begin{array}{cccc}
+1&2&1&2\\
+2&1&2&1\\
+1&2&1&2\\
+2&1&2&1\\
+\end{array}
+$$
+\end{minipage}
+\begin{minipage}{.49\linewidth}
+\centering
+eight-nearest
+$$
+\begin{array}{cccc}
+1&2&1&2\\
+3&4&3&4\\
+1&2&1&2\\
+3&4&3&4\\
+\end{array}
+$$
+\end{minipage}
+
+
+On the other hand, for an eight-nearest neighbor scheme (\ref{eqn:neighbor}), locations can be partitioned into four concliques illustrated above. Note that if a single conclique in the conclique example above with four-nearest neighbors is subdivided, the resulting subsets also constitute concliques (e.g., in the conclique example above with four-nearest neighbors, any nontrivial subset of "2"'s could be replaced by "3"'s to create a collection of three concliques). Hence, ideally, one wishes to have minimal collection of concliques, or a so-called minimal conclique cover [cf. KLN], whereby $Q$ is as small as possible. For example, minimal conclique covers have sizes $Q=2$ and $Q=4$, respectively, for the four- and eight-nearest neighbor schemes above.           
+
+For goodness-of-fitting testing with MRF models, [KLN] used concliques to define generalized spatial residuals based on a conditional probability integral transform.  That is, let $F_i$ denote the cumulative distribution function (cdf) for the conditional density $f_i$ of observation $Y(\boldsymbol s_i)$ in (\ref{eqn:1}). If we assume such cdfs are continuous for simplicity, then the residual for location $\boldsymbol s_i$ is defined as $R(\boldsymbol s_i) = F_i(Y(\boldsymbol s_i): \{Y(\boldsymbol s_j) : \boldsymbol s_j\in\mathcal{N}_i\})$, by substituting observations into the conditional cdf form. A main result of [KLN] for assessing MRF specifications is that, under the MRF model, these residuals are iid Uniform$(0,1)$ distributed within each conclique: that is,
+\begin{equation}
+\label{eqn:2}
+ \mbox{ $\{R(\boldsymbol s) : \boldsymbol s \in \mathcal{C}_j\}$ are a Uniform$(0,1)$ random sample}, 
+\end{equation}
+for each $j=1,\dots,Q$. While dependence can exist between residuals from differing concliques, [KLN] developed goodness-of-fit test statistics by comparing residuals per conclique to a uniform reference distribution and pooling discrepancies across concliques. However, apart from model assessment, one could alternatively interpret the result in (\ref{eqn:2}) as a means of simulating or generating observations for an entire conclique: draw a random sample of Uniform$(0,1)$ variables, say $\{U(\boldsymbol s) : \boldsymbol s \in \mathcal{C}_j\}$, and compute $Y(\boldsymbol s) \equiv R^{-1}(U(\boldsymbol s)), \boldsymbol s \in \mathcal{C}_j$. For generating data from a MRF model, this suggests a way to formulate a Gibbs sampler in an alternative fashion to the standard sequential Gibbs approach, whereby updates are conducted independently and simultaneously per conclique, which we describe next.
+
+The algorithm for a conclique-based composition Gibbs sampler (CGS) is presented below. Additionally, Appendix \@ref(appendix-samplers) describes two further conclique-based samplers in the form of a  random sequence scan (RQGS) and random scan (RSGS) Gibbs sampler. The CGS updates each conclique in a fixed order for each iteration, whereas the RQGS updates all concliques in a randomly selected order according to a fixed permutation probability while the RSGS randomly updates one conclique in each iteration while maintaining the other conclique according to a fixed component selection probability. While CGS is the most commonly used Gibbs sampling scheme, we present RSGS and RQGS for completeness as these possess theoretical properties of potential interest in some cases [e.g. reversibility;cf. @johnson2015geometric]. In the following, let $Y^{(i)}(\boldsymbol s)$ denote the value of an observation at location $\boldsymbol s$ at the $i$th iteration of the Gibbs sampler for $i=0,1,\ldots.$ 
+
+**Conclique-based CGS Algorithm**, Let $M \geq 1$ denote the number of complete Gibbs iterations:
+
+1. Split locations into $Q \geq 2$ disjoint concliques, $\mathcal{C}_1,\ldots,\mathcal{C}_Q$.
+1. Initialize the values of $\{Y^{(0)}(\boldsymbol s): \boldsymbol s \in \{\mathcal{C}_2, \dots, \mathcal{C}_Q\}\}$.
+1. For iteration $i = 1, \dots, M$,
+    1. Considering all locations $\boldsymbol s_j \in \mathcal{C}_1$, sample $\{Y^{(i)}(\boldsymbol s_j) :  \boldsymbol s_j \in \mathcal{C}_1 \}$ by independently drawing $Y^{(i)}(\boldsymbol s_j) \sim f_j(\cdot|\{Y^{(i-1)}(\boldsymbol s), \boldsymbol s \in \mathcal{N}_j\})$ from conditionals in (\ref{eqn:1}).
+    1. Set $\ell =2$. Considering all locations $\boldsymbol s_j \in \mathcal{C}_\ell$, sample $\{Y^{(i)}(\boldsymbol s_j): \boldsymbol s_j \in \mathcal{C}_\ell\}$ by independently drawing $Y^{(i)}(\boldsymbol s_j) \sim f_j(\cdot|\boldsymbol y_\ell^{(i)}(\mathcal{N}_j))$ with conditioning observations
+$\boldsymbol y_\ell^{(i)}(\mathcal{N}_j) \equiv
+\cup_{k=1}^{\ell-1} \{ Y^{(i)}(\boldsymbol s):\boldsymbol s \in \mathcal{N}_j \cap \mathcal{C}_k\} \bigcup \cup_{k=\ell+1}^{Q} \{ Y^{(i-1)}(\boldsymbol s):\boldsymbol s \in \mathcal{N}_j \cap \mathcal{C}_k \}$, where the second set union is defined as empty if $\ell=Q$.  
+    1. For $Q>2$, repeat step 2 for each $\ell=3,\ldots,Q$.
+    
+Note that, at the $i$th sampling iteration, observations with locations the $\ell$th conclique $\mathcal{C}_\ell$ ($1<\ell<Q$) are updated conditional on the observations associated with other concliques, where observations with locations in concliques $\mathcal{C}_1,\ldots,\mathcal{C}_{\ell-1}$ are updated before conclique $\mathcal{C}_{\ell}$ at the $i$th stage of iteration while observations  associated with concliques $\mathcal{C}_{\ell+1},\ldots, C_{Q}$ are updated after conclique $C_\ell$ at the $i$th stage. This sampling plan is operational because, at each conclique update, the neighboring observations needed for conditioning in target conditional distributions, by design, never belong to the same conclique being updated. Essentially, the sampler exploits a group type of conditional independence that induced by the MRF model, specified at the individual observation level $f_i$.
+
+Under a mild condition on the MRF model, presented next, the conclique-based Gibbs sampler can be shown to be valid.    
+
+\begin{condition}[Conclique positivity condition] 
+\label{condition:conc-pos}
+The full conditionals (\ref{eqn:1}) for the MRF model specify a valid joint distribution $\Pi(\cdot)$ for $(Y(\boldsymbol s_1), \dots, Y(\boldsymbol s_n))$ with density/mass function $\pi(\cdot)$ having support $\mathcal{X} \subset \mathbb{R}^n$. For the collected $\mathcal{C}_1, \dots, \mathcal{C}_Q$ of concliques under the MRF model, it holds that
+$\mathcal{X} = \mathcal{X}_1 \times \cdots \times \mathcal{X}_Q$ where $\mathcal{X}_i$ denotes the support of the marginal density of observations $\{Y(s_j): s_j \in \mathcal{C}_i\}$ with locations in conclique $\mathcal{C}_i, i=1, \dots, Q$.
+\end{condition}
+
+We again assume assume the conditional specification of the MRF yields a valid joint distribution $\Pi(\cdot)$ for observations $\{Y(\boldsymbol s_1),\ldots,Y(\boldsymbol s_n)\}$; see @kaiser2000construction and references therein for details on joint construction. Condition \ref{condition:conc-pos} also involves a minimal assumption regarding the support of observations among concliques in order to guarantee appropriate transition properties of the proposed CGS.  This conclique-wise positivity condition is implied by @besag1974spatial's original positivity condition, stating that the joint support may be expressed as the cross product of marginal supports across individual observations. (The latter was used by @besag1974spatial to determine a joint distribution from conditional specifications (1) in some MRF models.) Under Condition \ref{condition:conc-pos}, Theorem \ref{thm:gibbs_harris} next shows that the conclique-based CGS is guaranteed to capture the target joint data distribution $\Pi$ as the number of Gibbs iterations increase. That is, the sampler is provably Harris ergodic (i.e., $phi$-irreducible, aperiodic and Harris recurrent with invariant distribution $\Pi(\cdot)$ for a measure $\phi$); see @harris1956existence. To state the result, let $P^{(m)}(x, A)$, $A\in\mathcal{F}$, denote the transition distribution of the conclique-based CGS after $m \geq 1$ complete iterations from an initializing point $x \in \mathcal{X}$, where $\mathcal{F}$ denotes the appropriate $\sigma$-algebra associated with $\mathcal{X}\subset \mathbb{R}^n$.  
+
+\begin{theorem}
+\label{thm:gibbs_harris}
+Suppose Condition \ref{condition:conc-pos} holds. Then the conclique-based CGS Gibbs sampler (presented above) is Harris ergodic with stationary distribution given by the joint data distribution, $\Pi(\cdot)$ and, for any initialization $x\in\mathcal{X}$, the sampler will monotonically converge to $\Pi(\cdot)$ in total variation distance as the number of iterations $m\to \infty$, i.e.,
+$$
+\sup_{A \in \mathcal{F}}| P^{(m)}(x,A) -\Pi(A)| \downarrow 0\quad \text{ as } m \to \infty.
+$$
+\end{theorem}
+
+The conclusion of Theorem \ref{thm:gibbs_harris} also holds for the two additional conclique-wise Gibbs samplers (RQGS and RSGS) described in Appendix \@ref(appendix-samplers). See Appendix \@ref(appendix-ergodicity) for details on the proof.
+
+## Simulation comparisons 
+
+By exploiting a systematic type of group-wise conditional independence induced a MRF formulation (\ref{eqn:1}), the intent of the conclique Gibbs sampler is to provide a more efficient method for simulating data from MRF models than the sequential Gibbs sampler that is directly implied by the observation-wise conditional distributions in the original MRF specification (\ref{eqn:1}). To numerically investigate performance, we employ a quantitative framework from @turek2017automated and explore two contributors to MCMC efficiency in terms of both mixing effectiveness (or algorithmic capability to produce approximately independent samples from the target joint data distribution) as well as computational demands of the algorithm (related to computing speed). Because the conclique-based Gibbs sampler is a block updating Gibbs sampler, this may be compared to the traditional sequential (scalar) sampler in both senses of efficiency with metrics of @turek2017automated. We compare the methods for simulating data $Y(\boldsymbol s_i)$ from a spatial MRF model at a set of $n$ locations $\boldsymbol s_i$, $i=1,\dots,n$ on a regular grid, as explained in the following.
+
+To assess mixing or algorithmic efficiency, we consider the location-wise minimum number of effective samples per actual sample, which is defined in terms of a quantity
+$$
+A = \min\limits_{1 \le i \le n}\left\{\left( 1 + 2\sum\limits_{j = 1}^\infty \rho_i(j)\right)^{-1}\right\},
+$$
+where $\rho_i(j)$, $j \geq 1$, denotes the process autocorrelation function for the chain generations of observation $Y(\boldsymbol s_i)$ over MCMC/Gibbs iterations. The quantity $A$ corresponds to the minimum inverse of integrated autocorrelations among the chains output by location [@roberts2001optimal; @turek2017automated]. For $M$ full iterations of a Gibbs sampler, the number of approximately independent full data sets is then approximated as $A/M$, after adjusting for the largest autocorrelation among MCMC iterations incurred a sampling location. Hence the intent of this measure is to capture the "worst case scenario" in terms of chain mixing for a Gibbs sampler type, where large values of $A$ indicate poorer mixing properties for a sampler. For a given MRF model and sample size $n$, the quantity $A$ is estimated from a realized chain produced by a Gibbs sampler and we use a kernel estimator based on sample autocorrelations as provided in the package `LaplacesDemon` [@laplacesdemon].
+
+As a different consideration, computational efficiency (computing speed) is to be measured in units of algorithmic run-time per MCMC iteration. For the purpose of generating data from a spatial MRF model, we will compare the total computational cost of simulating an observation at each spatial location with respect to both conclique and sequential Gibbs samplers. For this, let $\text{samp}(\cdot|\cdot)$ generally denote the time needed to randomly sample once from a (scalar or vector-valued) conditional distribution. Then the computational cost $C$ for each of the two sampling schemes is given respectively as
+\begin{align*}
+C &= \begin{cases}
+\sum\limits_{k = 1}^Q \text{samp}(\{Y(\boldsymbol s_i) : \boldsymbol s_i \in \mathcal{C}_k\}| \mathcal{C}_{j}, j \not= k) & \text{Conclique-based}\\
+\sum\limits_{k = 1}^n \text{samp}(Y(\boldsymbol s_k) | Y(\boldsymbol s_j), j \not= k) & \text{Sequential,}
+\end{cases}
+\end{align*}
+which does not include any initial computational overhead, such as memory allocation or assigning location to concliques. If the average cost $\text{samp}(\{ Y(\boldsymbol s) : \boldsymbol s \in \mathcal{C}_k\})/n_k$ to jointly sample all $n_k$ (say) values of a conclique is less than the average cost $C/n$ to individually sample all $n$ data values, then the conclique Gibbs sampler will exhibit computational improvements over the sequential update Gibbs sampler. Reported values of $A$ are determined by the average of estimation from $10$ chains with different starting values and values of $C$ are determined by recording running times of $20,000$ conclique-based $\text{samp}(\{ Y(\boldsymbol s) : \boldsymbol s \in \mathcal{C}_k\})$ and $16,000$ sequential $\text{samp}(Y(\boldsymbol s_k) | Y(\boldsymbol s_j), j \not= k)$ in `R` and averaging the results.
+
+```{r algo-eff, cache=TRUE}
+N <- 40
+params0 <- list(eta = .5, kappa = .5)
+params1 <- list(eta_1 = .2, eta_2 = .7, kappa = .5)
+params2 <- list(eta_1 = .2, eta_2 = .7, beta_0 = -10, beta_1 = .5)
+num_sample <- 10000
+
+#create grid, lattices, neighbors, concliques for MCMC ------------------
+grid <- matrix(1:(N*N), nrow = N)
+conclique <- concliques_4nn(grid)
+lattice <- lattice_4nn_torus(dimvec = c(N, N))
+neighbors <- get_neighbors(lattice, TRUE, grid)
+
+## custom function -------
+Rcpp::sourceCpp("code/binary_two_param_reg_sampler.cpp")
+
+## repeat ----------
+times <- 10
+algo_eff <- list(conc = list(m0 = rep(NA, times), m1 = rep(NA, times), m2 = rep(NA, times)),
+                 seq = list(m0 = rep(NA, times), m1 = rep(NA, times), m2 = rep(NA, times)))
+
+## do one for later -----
+inits <- matrix(rbinom(n = N*N, size = 1, prob = .5), nrow = N)
+samp_conc_m0 <- run_conclique_gibbs(conclique, neighbors, inits, "binary_single_param", params0, num_sample)
+samp_seq_m0 <- run_sequential_gibbs(neighbors, inits, "binary_single_param", params0, num_sample)
+samp_conc_m1 <- run_conclique_gibbs(conclique, neighbors, inits, "binary_two_param", params1, num_sample)
+samp_seq_m1 <- run_sequential_gibbs(neighbors, inits, "binary_two_param", params1, num_sample)
+samp_conc_m2 <- run_conclique_gibbs(conclique, neighbors, inits, "binary_two_param_reg_sampler", params2, num_sample)
+samp_seq_m2 <- run_sequential_gibbs(neighbors, inits, "binary_two_param_reg_sampler", params2, num_sample)
+
+## get A -------
+algo_eff$conc$m0[1] <- min(apply(samp_conc_m0, 2, LaplacesDemon::IAT)^(-1))
+algo_eff$seq$m0[1] <- min(apply(samp_seq_m0, 2, LaplacesDemon::IAT)^(-1))
+algo_eff$conc$m1[1] <- min(apply(samp_conc_m1, 2, LaplacesDemon::IAT)^(-1))
+algo_eff$seq$m1[1] <- min(apply(samp_seq_m1, 2, LaplacesDemon::IAT)^(-1))
+algo_eff$conc$m2[1] <- min(apply(samp_conc_m2, 2, LaplacesDemon::IAT)^(-1), na.rm = TRUE)
+algo_eff$seq$m2[1] <- min(apply(samp_seq_m2, 2, LaplacesDemon::IAT)^(-1), na.rm = TRUE)
+
+## do the rest -----
+for(i in 2:times) {
+  ## get samples ----------
+  inits <- matrix(rbinom(n = N*N, size = 1, prob = .5), nrow = N)
+  samp_conc_m0 <- run_conclique_gibbs(conclique, neighbors, inits, "binary_single_param", params0, num_sample)
+  samp_seq_m0 <- run_sequential_gibbs(neighbors, inits, "binary_single_param", params0, num_sample)
+  samp_conc_m1 <- run_conclique_gibbs(conclique, neighbors, inits, "binary_two_param", params1, num_sample)
+  samp_seq_m1 <- run_sequential_gibbs(neighbors, inits, "binary_two_param", params1, num_sample)
+  samp_conc_m2 <- run_conclique_gibbs(conclique, neighbors, inits, "binary_two_param_reg_sampler", params2, num_sample)
+  samp_seq_m2 <- run_sequential_gibbs(neighbors, inits, "binary_two_param_reg_sampler", params2, num_sample)
+  
+  ## get A -------
+  algo_eff$conc$m0[i] <- min(apply(samp_conc_m0, 2, LaplacesDemon::IAT)^(-1))
+  algo_eff$seq$m0[i] <- min(apply(samp_seq_m0, 2, LaplacesDemon::IAT)^(-1))
+  algo_eff$conc$m1[i] <- min(apply(samp_conc_m1, 2, LaplacesDemon::IAT)^(-1))
+  algo_eff$seq$m1[i] <- min(apply(samp_seq_m1, 2, LaplacesDemon::IAT)^(-1))
+  algo_eff$conc$m2[i] <- min(apply(samp_conc_m2, 2, LaplacesDemon::IAT)^(-1), na.rm = TRUE)
+  algo_eff$seq$m2[i] <- min(apply(samp_seq_m2, 2, LaplacesDemon::IAT)^(-1), na.rm = TRUE)
+}
+```
+
+```{r compu-eff-format, cache=TRUE}
+get_data <- function(data, neighbors, gibbs = c("conclique", "sequential"), concliques = NULL, N = NULL) {
+  stopifnot((gibbs == "conclique" & !is.null(concliques)) | gibbs == "sequential")
+  
+  nums <- lapply(neighbors, function(neigh) {
+    rowSums(!is.na(neigh[, -1]))
+  }) 
+  sums <- lapply(neighbors, function(neigh) {
+    rowSums(matrix(data[neigh[, -1]], ncol = ncol(neigh) - 1, byrow = TRUE))
+  }) 
+  u <- (0:(length(data) - 1)) %% N + 1
+  
+  
+  if(gibbs == "sequential") {
+    res <- lapply(seq_along(data), function(i) list(data = data[i], nums = lapply(nums, function(num) num[i]),
+                                                   sums = lapply(sums, function(sum) sum[i]), u = u[i]))
+  } else {
+    res <- lapply(concliques, function(conc) {
+      list(data = data[conc], 
+           nums = lapply(nums, function(num) num[conc]),
+           sums = lapply(sums, function(sum) sum[conc]), 
+           u = u[conc])
+    })
+  }
+  return(res)
+}
+
+format_conc_m0 <- lapply(seq_len(nrow(samp_conc_m0)), function(row) {
+  get_data(samp_conc_m0[row, ], neighbors, "conclique", conclique, N)
+  }) %>%
+  unlist(recursive = FALSE)
+format_seq_m0 <- lapply(1:10, function(row) {
+  get_data(samp_seq_m0[row, ], neighbors, "sequential", conclique, N)
+  }) %>%
+  unlist(recursive = FALSE)
+format_conc_m1 <- lapply(seq_len(nrow(samp_conc_m1)), function(row) {
+  get_data(samp_conc_m1[row, ], neighbors, "conclique", conclique, N)
+  }) %>%
+  unlist(recursive = FALSE)
+format_seq_m1 <- lapply(1:10, function(row) {
+  get_data(samp_seq_m1[row, ], neighbors, "sequential", conclique, N)
+  }) %>%
+  unlist(recursive = FALSE)
+format_conc_m2 <- lapply(seq_len(nrow(samp_conc_m2)), function(row) {
+  get_data(samp_conc_m2[row, ], neighbors, "conclique", conclique, N)
+  }) %>%
+  unlist(recursive = FALSE)
+format_seq_m2 <- lapply(1:10, function(row) {
+  get_data(samp_seq_m2[row, ], neighbors, "sequential", conclique, N)
+  }) %>%
+  unlist(recursive = FALSE)
+```
+
+```{r compu-eff-times, cache=TRUE}
+times_conc_m0 <- lapply(format_conc_m0, function(x) {
+  time <- Sys.time()
+  tmp <- binary_single_param_sampler(x, params0)
+  time2 <- Sys.time()
+  as.numeric(difftime(time2, time, units = "secs"))
+}) %>% unlist()
+
+times_seq_m0 <- lapply(format_seq_m0, function(x) {
+  time <- Sys.time()
+  tmp <- binary_single_param_sampler(x, params0)
+  time2 <- Sys.time()
+  as.numeric(difftime(time2, time, units = "secs"))
+}) %>% unlist()
+
+times_conc_m1 <- lapply(format_conc_m1, function(x) {
+  time <- Sys.time()
+  tmp <- binary_two_param_sampler(x, params1)
+  time2 <- Sys.time()
+  as.numeric(difftime(time2, time, units = "secs"))
+}) %>% unlist()
+
+times_seq_m1 <- lapply(format_seq_m1, function(x) {
+  time <- Sys.time()
+  tmp <- binary_two_param_sampler(x, params1)
+  time2 <- Sys.time()
+  as.numeric(difftime(time2, time, units = "secs"))
+}) %>% unlist()
+
+times_conc_m2 <- lapply(format_conc_m2, function(x) {
+  time <- Sys.time()
+  tmp <- binary_two_param_reg_sampler(x, params2)
+  time2 <- Sys.time()
+  as.numeric(difftime(time2, time, units = "secs"))
+}) %>% unlist()
+
+times_seq_m2 <- lapply(format_seq_m2, function(x) {
+  time <- Sys.time()
+  tmp <- binary_two_param_reg_sampler(x, params2)
+  time2 <- Sys.time()
+  as.numeric(difftime(time2, time, units = "secs"))
+}) %>% unlist()
+
+```
+
+For illustration, we first consider the two metrics $A$ and $C$ for the three spatial binary models of varying complexity introduced in Section \ref{illustrative-example} for a $`r N` \times `r N`$ grid and `r comma(num_sample)` iterations. The results for all three models are in Table \ref{tab:eff-results}. 
+
+\begin{table}[ht]
+\centering
+\begin{tabular}{|l|rr|rr|rr|}
+\hline
+Gibbs algorithm & \multicolumn{2}{|c|}{Model (a)} & \multicolumn{2}{|c|}{Model (b)} & \multicolumn{2}{|c|}{Model (c)} \\
+\cline{2-7}
+ & A & C & A & C & A & C \\
+\hline
+Conclique & $`r round(mean(algo_eff$conc$m0), 5)`$ & $`r round(mean(times_conc_m0)*length(conclique), 5)`$ & $`r round(mean(algo_eff$conc$m1), 5)`$ & $`r round(mean(times_conc_m1)*length(conclique), 5)`$ & $`r round(mean(algo_eff$conc$m2), 5)`$ & $`r round(mean(times_conc_m2)*length(conclique), 5)`$ \\
+Sequential & $`r round(mean(algo_eff$seq$m0), 5)`$ & $`r round(mean(times_seq_m0)*ncol(samp_conc_m0), 5)`$ & $`r round(mean(algo_eff$seq$m1), 5)`$ & $`r round(mean(times_seq_m1)*ncol(samp_conc_m0), 5)`$ & $`r round(mean(algo_eff$seq$m2), 5)`$ & $`r round(mean(times_seq_m2)*ncol(samp_conc_m0), 5)`$ \\
+\hline
+\end{tabular}
+\caption{Measures of algorithmic and computational efficiency, $A$ and $C$, for three autologistic models presented in Section \ref{illustrative-example} on a $`r N` \times `r N`$ grid. We compare the metrics for a conclique-based Gibbs sampler and a sequential sampler.}
+\label{tab:eff-results}
+\end{table}
+
+Table \ref{tab:eff-results} indicates that, as the models become more complex (more parameters), their algorithmic or mixing efficiency is slightly decreased and the computational complexity remains similar. In other words, to achieve the same number of effective draws from the target joint data distribution, more iterations become necessary as the underlying model becomes more slightly more complex, though the computational demands per Gibbs iteration are relatively unchanged for these models. However, comparing the conclique-based to the sequential-based samplers, the conclique-based is at least `r round(min(c((mean(times_seq_m0)*ncol(samp_conc_m0))/(mean(times_conc_m0)*length(conclique)), (mean(times_seq_m1)*ncol(samp_conc_m1))/(mean(times_conc_m1)*length(conclique)), (mean(times_seq_m2)*ncol(samp_conc_m2))/(mean(times_conc_m2)*length(conclique)))), 0)` times faster than the sequential-based sampler in any model case here. This example suggests that the algorithmic/mixing efficiencies of both conclique-based and sequential Gibbs samplers are often similar, which is true for the models and sample sizes considered in Table \ref{tab:eff-results} as well as for all other MRF models and grid sizes encountered in our investigations. Nevertheless, the actual time savings of the conclique-based sampler over the sequential Gibbs can be quite substantial, where the computational benefits can greatly increase as the desired number of MCMC iterations grows. The latter is relevant to enhancing the effective MCMC sample size when simulating data from MRF models of increasing complexity.
+
+```{r timing-data}
+load("data/6_timings.RData")
+
+summary_times <- timings %>% 
+  filter(N == 75) %>% 
+  gather(gibbs, time, conclique, sequential) %>% 
+  group_by(gibbs, n.iter) %>% 
+  summarise(mean_time = mean(time)) %>%
+  spread(gibbs, mean_time)
+```
+
+To illustrate and compare computational speeds in a larger context, we also evaluated timing results for simulation of data from the conditional Gaussian specification in (\ref{eqn:3}), considering various spatial grid sizes and numbers of iterations for each Gibbs sampler.  In (\ref{eqn:3}), the exact parameter values are immaterial to the timing study, but we chose $\alpha=0$, $\tau^2=1$ and $\eta=0.2$ there. For timing reference, we implemented the standard sequential and conclique-based Gibbs samplers using C++ implementations in an available R package `conclique` on a 1.7 GHz processor. Figure \ref{fig:timings} summarizes log running times for simulating $M$ data sets from the Gaussian MRF model on a grid of size $n = m\times m$, for $m=5,10,20,30,50,75$ and $M=100,1000,5000,10000$. 
+
+```{r timings-plot, fig.height=4, fig.cap="\\label{fig:timings}Comparisons of log time for simulation of $M=100, 1000, 5000, 10000$ four-nearest neighbor MRF datasets on a lattice of size $m \\times m$ for various size grids, $m = 5, 10, 20, 30, 50, 75$, using sequential and conclique-based Gibbs samplers.", fig.height=3}
+timings %>%
+  gather(gibbs, time, conclique, sequential) %>% ungroup() %>%
+  mutate(n.iter_f = factor(paste("M =", n.iter), levels=unique(paste("M =", timings$n.iter)))) %>%
+  group_by(N, n.iter, gibbs) %>%
+  mutate(mean_time = mean(time)) %>%
+  ggplot() +
+  geom_jitter(aes(N, log(time), colour = gibbs), alpha = .1, size = 2) +
+  geom_line(aes(N, log(mean_time), colour = gibbs), size = 1) +
+  facet_wrap(~n.iter_f, nrow = 1) +
+  xlab("m") +
+  ylab("Log Time (seconds)") +
+  scale_colour_discrete("Gibbs sampler", labels=c("Conclique", "Sequential")) +
+  theme(legend.position = "bottom")
+```
+ 
+For small grid sizes (e.g. $5 \times 5$ or $10 \times 10$) the time savings are minimal, but as grid sizes become larger the time saving for the conclique verses sequential Gibbs sampler is substantial. For example, the conclique-based Gibbs sampler took $`r round(summary_times$conclique[4], 2)`$ seconds and the sequential-based Gibbs sampler took $`r round(summary_times$sequential[4], 2)`$ seconds ($\approx `r round(summary_times$sequential[4]/60, 2)`$ minutes) to simulate $10,000$ spatial data sets of size $75 \times 75$. Essentially, as the number $M$ of iterations increases, the computational time is linear in $M$ with both samplers for a given spatial sample size $n=m\times m$. However, from Figure \ref{fig:timings}, computational time increases exponentially faster for the sequential Gibbs sampler compared to the conclique approach as number of observations increases through $m$. Consequently, the conclique-based Gibbs sampler can be dramatically more time efficient for simulating large collections of even moderately sized samples.  
+
+## Ergodicity results
+
+In addition to potential benefits computational speeds, the structure of the conclique-based Gibbs sampler also allows some important theoretical properties to be generally and formally shown. Our goal here is to establish that the sampling approach is guaranteed to be geometrically ergodic or, equivalently, to exhibit a exponential fast mixing rate as a function of the number of iterations. Recalling notation from Section 3, let $\Pi(\cdot)$ again denote the joint distribution of observations $\{Y(\boldsymbol s_1),\ldots,Y(\boldsymbol s_n)\}$ induced by a MRF specification (\ref{eqn:1}) rate and let $P^{(m)}(x, \cdot)$ represent the transition distribution at the $m$th iteration of the sampler with initialization $x\in\mathcal{X}$. Then, the sampler is *geometrically ergodic* if there exists some real-valued function $G: \mathcal{X} \rightarrow \mathbb{R}$ and some constant $t \in (0,1)$ which satisfy
+$$
+\sup_{A \in \mathcal{F}}\vert P^{(m)}(x, A) - \Pi(A) \vert \le G(x)t^m \qquad \text{ for any } x \in \mathcal{X},
+$$
+where again $\mathcal{F}$ denotes the $\sigma$-algebra associated with the joint support $\mathcal{X}\subset \mathbb{R}^n$
+of $\{Y(boldsymbol s_1),\ldots,Y(\boldsymbol s_n)\}$ (cf. Condition \ref{condition:conc-pos}). Hence, if the conclique-based sampler is geometrically ergodic, then the distribution $P^{(m)}(x,\cdot)$ induced by the sampler converges geometrically fast to the target (joint) distribution in total variation norm, regardless of initialization $x\in\mathcal{X}$. It turns out that the conclique-based Gibbs sampler (CGS) can, in fact, be proven to be geometrically ergodic for a general type of MRF model, namely, a MRF specification exhibiting two concliques. While the result is specialized to two conclique MRF models, this model class is surprisingly large in spatial applications where four-nearest neighborhood structures are commonly used, which creates two concliques (cf. Section \ref{conclique-based-gibbs-sampling-algorithms}). In contrast, geometric ergodicity of the standard sequential Gibbs sampler is not possible to similarly establish for this collection of MRF models or more generally.  This is because current theory for the geometric ergodicity of a Gibbs sampler is restricted .to less than 4-components in the Gibbs sampler [See, among others @johnson2015geometric; @hobert1998geometric; @tan2009block; @doss2010estimation; @jones2004sufficient; @johnson2015geometricergodicity].
+
+In other words, the conclique-based approach allows fast theoretical mixing properties to be established in sampling from important collection of spatial MRF models, which has been previously intractable to do with Gibbs sampling. This finding is summarized in Theorem \ref{thm:2}.   
+
+\begin{theorem}
+\label{thm:2}
+Suppose a MRF model for $\{Y(\boldsymbol s_i): i = 1, \dots, n\}$ admits two concliques and assume Condition \ref{condition:conc-pos} holds with $\mathcal{X} = \mathcal{X}_1\times\mathcal{X}_2 \subset \mathbb{R}^n$ (where $\mathcal{X}_i$ denotes the support of observations associated wit conclique $i = 1,2$). Additionally, suppose that either $\mathcal{X}_1$ or $\mathcal{X}_2$ is compact and that the full conditionals (\ref{eqn:1}) are continuous in conditioning variables $\boldsymbol y(\mathcal{N}_i)$, $i = 1, \dots, n$. Then, the conclique-based Gibbs sampler (CGS) is geometrically ergodic with stationary distribution given by the full joint, $\Pi(\cdot)$. 
+\end{theorem}
+
+\begin{remark}
+Theorem \ref{thm:gibbs_harris} also holds for two additional Gibbs samplers (RQGS and RSGS) described in Appendix \@ref(appendix-samplers) in addition to the CGS. See Appendix \@ref(appendix-ergodicity) for proof.
+\end{remark}
+
+Theorem \ref{thm:2} automatically ensures geometric ergodicity of the conclique-based sampler for several four-nearest neighbor MRF models having compact support $\mathcal{X}$ for $\{Y(\boldsymbol s_1),\ldots,Y(\boldsymbol s_n)\}$, such as the the autologistic binary, the conditional binomial, the conditional Beta, and the Multinomial distributions as well as the windsorized Poisson model of @kaiser1997modeling.
+
+Furthermore, the geometric ergodicity of the conclique-based Gibbs sampling algorithm can also be established for four-nearest neighborhood MRF models with unbounded support. Theorem \ref{thm:cases} treats three such cases of conditional distributions in the form of centered versions of the Gaussian, Inverse Gaussian, and Truncated Gamma MRF models. These models belong to exponential families, with conditional densities of the form
+
+\begin{align}
+f_i(y(\boldsymbol s_i)|\{\boldsymbol y(\mathcal{N}_i)\}) = \exp\left[\sum\limits_{k = 1}^K A_{ki}(\boldsymbol y(\mathcal{N}_i)) T_k(y(\boldsymbol s_i)) - B_i(\boldsymbol y(\mathcal{N}_i)) + C(y(\boldsymbol s_i)) \right] \label{eqn:exp_fam}
+\end{align}
+which is a generalization of (\ref{eqn:2}) involving further possible statistics $T_k(y(\boldsymbol s_i))$ of observation $y(\boldsymbol s_i)$ in the conditional density along with associated natural parameter functions $A_{ki}(\boldsymbol y(\mathcal{N}_i))$ based on neighboring observations $\boldsymbol y(\mathcal{N}_i)$ [cf. @kaiser2007statistical]. Additionally, $f_i$ in (\ref{eqn:exp_fam}) may depend on further model parameters, as indicated in models considered in Theorem \ref{thm:cases} next.
+
+\begin{theorem}
+\label{thm:cases}
+Suppose $\{Y(\boldsymbol s_i): i = 1, \dots, n\}$ with positions on a regular lattice in $\mathbb{R}^2$ follow a MRF model with a common conditional distribution form (\ref{eqn:1}) belonging to one of the following exponential families with a neighborhood $\mathcal{N}_i \subset \{\boldsymbol s_i \pm (0,1), \boldsymbol s_i \pm (1,0)\}$, $i = 1, \dots, n$ (i.e. four-nearest neighborhood structure). Then, the conclique-based Gibbs sampler (CGS) is geometrically ergodic for each of the following 
+\begin{enumerate}[(a)]
+\item The conditional Gaussian model from (\ref{eqn:3}) having conditional variance $\tau^2$ and density 
+$$
+f_i(y(\boldsymbol s_i)|\boldsymbol y(\mathcal{N}_i)) = \frac{1}{\sqrt{2\pi}\tau}\exp\left\{-\frac{1}{2\tau^2}(y(\boldsymbol s_i) - \mu(\boldsymbol s_i))\right\}, \quad y(\boldsymbol s_i) \in \mathbb{R},
+$$
+and conditional mean
+$$
+\mu(\boldsymbol s_i) = \alpha + \eta\sum\limits_{s_j \in \mathcal{N}_i}\{y(s_j) - \alpha\}
+$$
+where $|\eta| < 0.25$ and $\alpha \in \mathbb{R}$.
+\item The conditional (centered) Inverse Gaussian model with conditional expectations $\text{E}(y(\boldsymbol s_i)|\boldsymbol y(\mathcal{N}_i)) = \sqrt{A_{2i}(\boldsymbol y(\mathcal{N}_i))/A_{1i}(\boldsymbol y(\mathcal{N}_i))}$ and $\text{E}(1/y(\boldsymbol s_i)|\boldsymbol y(\mathcal{N}_i)) = \sqrt{A_{1i}(\boldsymbol y(\mathcal{N}_i))/A_{2i}(\boldsymbol y(\mathcal{N}_i))} + 1/A_{1i}(\boldsymbol y(\mathcal{N}_i))$ and conditional density form
+$$
+f_i(y_i | \boldsymbol \theta) = \exp \left\{\frac{A_{1i}(\boldsymbol y(\mathcal{N}_i))}{2} y(\boldsymbol s_i) - \frac{A_{2i}(\boldsymbol y(\mathcal{N}_i))}{2} \frac{1}{y(\boldsymbol s_i)} -B_i(\boldsymbol y(\mathcal{N}_i)) + C(y(\boldsymbol s_i))\right\}, \quad y(\boldsymbol s_i) \ge 1
+$$
+where
+\begin{align*}
+A_{1i}(\boldsymbol y(\mathcal{N}_i)) &= \frac{\lambda}{\mu^2} + \eta_1 \sum\limits_{\boldsymbol s_j \in \mathcal{N}_i}\left(\frac{1}{y(\boldsymbol s_j)} - \frac{1}{\mu} - \frac{1}{\lambda}\right) \\
+A_{2i}(\boldsymbol y(\mathcal{N}_i)) &= \lambda + \eta_2 \sum\limits_{\boldsymbol s_j \in \mathcal{N}_i}\left(y(\boldsymbol s_j) - \mu \right) \\
+\end{align*}
+and $\mu, \lambda > 0$, $0 \le \eta_1 \le \lambda^2/4\mu(\lambda + \mu), 0 \le \eta_2 \le \lambda^2/4\mu$. In this model, the parameters $\mu$ and $\lambda$ control the large scale mean, while $\eta_1$ and $\eta_2$ control the dependence. Under an independence model ($\eta_1 = \eta_2 = 0$), the mean of $Y(\boldsymbol s_i)$ is $\mu$ while the mean of $1/Y(\boldsymbol s_i)$ is $1/\mu + 1/\lambda$.
+\item The conditional (centered) Truncated Gamma model where $Y(\boldsymbol s_i)|\boldsymbol y(\mathcal{N}_i)$ is gamma (supported on $[1, \infty)$) with scale parameter $A_{1i}(\boldsymbol y(\mathcal{N}_i)) + 1$ and shape parameter $1/A_{2i}(\boldsymbol y(\mathcal{N}_i))$ with conditional density
+$$
+f_i(y(\boldsymbol s_i) | \boldsymbol \theta) = \exp \left\{A_{1i}(\boldsymbol y(\mathcal{N}_i)) \log(y_i) - A_{2i}(\boldsymbol y(\mathcal{N}_i)) y_i -B_i(\boldsymbol y(\mathcal{N}_i))) \right\}, \quad y(\boldsymbol s_i) \ge 1
+$$
+where 
+$$
+A_{1i}(\boldsymbol y(\mathcal{N}_i)) = \alpha_1 + \eta \sum\limits_{\boldsymbol s_j \in \mathcal{N}_i}\log(y(\boldsymbol s_j)) \quad \text{and} \quad A_{2i}(\boldsymbol y(\mathcal{N}_i)) = \alpha_2 
+$$
+for $\eta > 0, \alpha_1 >-1,  \alpha_2 > 0$.
+\end{enumerate}
+\end{theorem}
+
+The centered parameterization of Inverse Gaussian and Truncated Gamma models in Theorem \ref{thm:cases} provides an analog of the centering formulation developed in @caragea2009autologistic for spatial binary models. Hence, despite the theoretical limitation to conditional specifications with two concliques, the geometric ergodicity of conclique-based Gibbs sampler extends to simulating data from many MRF models for spatial data.
+
+## Discussion
+
+Fast simulation of data from MRF models is often an important task in statistical inference, which may be difficult to approach for correlated data structures (e.g., spatial data). We have presented a fast approach to simulating data from MRF models that employs conclique-based Gibbs sampling as an alternative to the standard single-site (sequential) Gibbs strategy while maintaining generally applicability compared to other simulation approaches for MRF models. In fact, this strategy is applicable to data structures that do not fall on a regular lattice, like network data. 
+
+In this paper, we have motivated the simulation method, formally established its validity, and assessed its computational performance through numerical studies, where speed advantages are shown. In addition to numerical evidence, we also presented formal proofs that the proposed Gibbs sampler for simulating MRF data is geometrically ergodic for simulating data from many commonly used spatial MRF models. Such general convergence results are typically unusual for spatial data generation but made possible here through the proposed sampling scheme. 
+
+In additional to the spatial MRF models explored in this paper, a MRF model can be used for random graphs and networks, modeling the incidence of edges between two graph nodes with a conditional distribution for each edge. For even a graph with a small number of nodes, there can be many edges, meaning that the single-site (sequential) Gibbs sampler would be computationally time demanding but the conclique-based approach could be applied to reduce the number of computations in each iteration. For example, in the graph models of [@casleton2017local], there is a geographic notion (a radius of influence) whereby nodes in the graph which are far apart in distance (or other covariates) will not share an edge. It follows that collections of nodes which are separated by a distance under the MRF model can be used to define concliques for edges in the graph (observations as edges which do not neighbor other edges in the graph). In this case, the proposed conclique-based Gibbs sampler could be used to allow inference on model parameters or GOF tests through parametric bootstrap samples in a computationally feasible amount of time.

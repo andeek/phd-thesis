@@ -1,6 +1,6 @@
 # (APPENDIX) Appendix {-}
 
-# ON THE ONE-TO-ONE CORRESPONDENCE BETWEEN PARAMETERS AND MOMENTS IN THE RBM DISTRIBUTION
+# ON THE ONE-TO-ONE CORRESPONDENCE BETWEEN PARAMETERS AND MOMENTS IN THE RBM DISTRIBUTION {#appendix-rbm}
 
 For integers $m,n \geq 1$, consider random vectors $\bm{V}_m \equiv(V_1,\ldots,V_m)$ and $\bm{H}_n\equiv (H_1,\ldots,H_n)$, where the random variables $V_i$ and $H_j$ assume values in $\{1,-1\}$, $i=1,\ldots,m$, $j=1,\ldots,n$. We suppose the vector $(\bm{V}_m,\bm{H}_n)$ follows a restricted Boltzmann machine (RBM) distribution, i.e. has probability mass function
 \begin{align*}
