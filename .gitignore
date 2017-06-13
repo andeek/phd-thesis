@@ -6,3 +6,5 @@ _bookdown_files
 
 phd-thesis.Rproj
 
+slides/public_cache
+slides/public_files

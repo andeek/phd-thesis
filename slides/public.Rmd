@@ -1,0 +1,781 @@
+---
+title: "A fast sampler for data simulation from spatial, and other, Markov random fields"
+shorttitle: "Conclique-based Gibbs"
+author: Andee Kaplan
+shortname: Kaplan, et al.
+institute: |
+    | Iowa State University
+    | ajkaplan@iastate.edu
+shortinstitute: ajkaplan@iastate.edu
+date: |
+  | June 22, 2017
+  |
+  | Slides available at <http://bit.ly/kaplan-phd>
+  |
+  | \footnotesize Joint work with M. Kaiser, S. Lahiri, and D. Nordman
+shortdate: "June 22, 2017"
+output: 
+  beamer_presentation:
+    keep_tex: true
+    template: beamer.tex
+    includes:
+      in_header: front-matter.tex
+theme: CambridgeUS
+bibliography: [refs.bib, ../resources/refs_conclique.bib]
+fig_caption: true
+nocite: |
+    @kaiser2007statistical, @hammersley1971markov, @besag1974spatial
+---
+
+```{r libraries, echo=FALSE, message=FALSE, warning=FALSE, cache=FALSE}
+library(knitr)
+library(ggplot2)
+library(dplyr)
+library(tidyr)
+library(conclique)
+library(mvtnorm)
+library(rootSolve)
+library(agridat)
+
+
+set.seed(1022)
+opts_chunk$set(echo=FALSE, message=FALSE, warning=FALSE, cache=TRUE)
+theme_set(theme_bw(base_family = "serif"))
+```
+
+# Overview
+
+**Thesis:** On advancing MCMC-based methods for Markovian data structures with applications to deep learning, simulation, and resampling
+
+**Goal:** Develop statistical inference via Markov chain Monte Carlo (MCMC) techniques in complex data problems related to statistical learning, the analysis of network/graph data, and spatial resampling.
+
+**Challenge:** Develop implementations which are both *statistically rigorous* and *computationally scalable* by exploiting conditional independence. 
+
+1. Statistical quantification of graph models used in deep machine learning and image classification (Ch. 2 & 3)
+2. Fast methods for simulating spatial, network, and other data (Ch. 4 & 5)
+
+
+# Goal
+
+- Markov random field models are possible for spatial or network data
+\vspace{.2in}
+- Rather than specifying a joint distribution directly, a  model is specified through a set of full conditional distributions for each spatial location
+\vspace{.2in}
+- Assume the spatial data are on a regular lattice (wrapped on a torus)
+
+\vspace{.4in}
+**Goal:** A new, provably fast approach for simulating spatial/network data.
+
+
+
+# Spatial Markov random field (MRF) models
+
+\begin{block}{Notation}
+\begin{itemize}
+\itemsep .2in
+\item Variables  $\{ Y(\mbs_i): i=1, \dots, n \}$ at locations $\{ \mbs_i: i=1, \dots, n\}$
+\item Neighborhoods: $\mathcal{N}_i$ specified according to some configuration
+\item Neighboring Values: $\mby(\mathcal{N}_i) = \{ y(\mbs_j) : \mbs_j \in \mathcal{N}_i \}$
+\item Full Conditionals: $\{ f_i(y(\mbs_i)|\mby(\mathcal{N}_i), \mbtheta): i=1, \dots, n \}$
+\vspace{.1in}
+\begin{itemize}
+  \itemsep .2in
+    \item $f_i(y(\mbs_i)|\mby(\mathcal{N}_i), \mbtheta)$ is conditional pmf/pdf of $Y(\mbs_i)$ given values for its neighbors  $\mby(\mathcal{N}_i)$
+    \item Often assume a common conditional cdf $F_i=F$ form ($f_i=f$) for all $i$
+\end{itemize}
+\end{itemize}
+\end{block}
+
+# Exponential family examples
+
+1. Conditional Gaussian (3 parameters):  
+    $$
+      f_i(y(\mbs_i)|\mby(\mathcal{N}_i),\alpha,\eta,\tau) = \frac{1}{\sqrt{2 \pi} \tau}\exp\left( -\frac{[y(\mbs_i) - \mu(\mbs_i) ]^2}{2 \tau^2}\right)
+    $$
+    $Y(\mbs_i)$ given neighbors $\mby(\mathcal{N}_i)$ is normal with variance $\tau^2$ and mean
+    $$
+    \mu(\mbs_i) = \alpha + \eta \sum_{\mbs_j \in \mathcal{N}_i}[y(\mbs_j)-\alpha]
+    $$
+2. Conditional Binary (2 parameters):  
+    $Y(\mbs_i)$ given neighbors $\mby(\mathcal{N}_i)$ is Bernoulli $p(\mbs_i,\kappa,\eta)$ where
+    $$
+    \mathrm{logit}[p(\mbs_i,\kappa,\eta)] = \mathrm{logit}( \kappa ) +\eta \sum_{\mbs_j \in \mathcal{N}_i}[y(\mbs_j)-\kappa]
+    $$
+
+In both examples, $\eta$ represents a dependence parameter.
+
+# Concliques
+
+\begin{block}{Cliques -- Hammersley and Clifford (1971)}
+Singletons and sets of locations such that each location in the set is a neighbor of all other locations in the set \\
+Example: Four nearest neighbors gives cliques of sizes $1$ and $2$
+\end{block}
+
+\begin{block}{The Converse of Cliques -- Concliques}
+Sets of locations such that no location in the set is a neighbor of any other location in the set
+
+\vspace{-.5cm}
+
+\footnotesize
+\begin{columns}
+\hspace*{-.8cm}
+\begin{column}{0.1\textwidth}
+\begin{center}
+\vspace*{-.9cm}
+\underline{4 Nearest}\\ \underline{Neighbors}
+$$
+\begin{array}{ccc}
+\cdot&*&\cdot \\
+*&\mbs&* \\
+\cdot&*&\cdot \\
+\end{array}
+$$
+\end{center}
+\end{column}
+\begin{column}{0.1\textwidth}
+\begin{center}
+ \underline{Concliques}\\ \underline{4 Nearest}\\ \underline{Neighbors}
+$$
+\begin{array}{cccc}
+1&2&1&2 \\
+2&1&2&1 \\
+1&2&1&2 \\
+2&1&2&1 \\
+\end{array}
+$$
+\end{center}
+\end{column}
+\begin{column}{0.1\textwidth}
+\begin{center}
+\vspace*{-.9cm}
+\underline{8 Nearest}\\ \underline{Neighbors}
+$$
+\begin{array}{ccc}
+*&*&* \\
+*&\mbs&* \\
+*&*&* \\
+\end{array}
+$$
+\end{center}
+\end{column}
+\begin{column}{0.1\textwidth}
+\begin{center}
+
+\vspace*{-.2cm}
+ \underline{Concliques}\\ \underline{8 Nearest}\\ \underline{Neighbors}
+$$
+\begin{array}{cccc}
+1&2&1&2 \\
+3&4&3&4 \\
+1&2&1&2 \\
+3&4&3&4 \\
+\end{array}
+$$
+\end{center}
+\end{column}
+\end{columns}
+\end{block}
+
+# Illustrative Example
+
+```{r endive-data}
+data(besag.endive)
+endive <- besag.endive
+m <- max(endive$row)
+n <- max(endive$col)
+```
+
+- Spatial dataset from @besag1977some 
+- Binary observations located on a $14\times 179$ indicating the presence or absence of footrot in endive plants
+
+```{r endive-data-plot, fig.cap=paste("\\label{fig:endive-data-plot}The endive dataset, a", m, "$\\times$", n, "rectangular lattice with binary data encoding the presence or absence of footrot in endive plants from Besag (1977).")}
+ggplot(endive, aes(col, row, fill = disease)) +
+  geom_tile() +
+  scale_fill_manual("Disease present", values = c("grey80", "black")) +
+  xlab("Column") + ylab("Row")
+
+# encode
+endive$disease <- ifelse(endive$disease == "Y", 1, 0)
+```
+
+# Three models
+
+1. Isotropic centered autologistic model [@caragea2009autologistic; @besag1972nearest; @besag1977some] 
+2. Centered autologistic model with two dependence parameters 
+3. Centered autologistic model as in 2. but having large scale structure determined by regression on the horizontal coordinate $u_i$ of each spatial location $\boldsymbol s_i=(u_i,v_i)$.
+
+Conditional mass function of the form
+$$
+f_i(y(\boldsymbol s_i)| \boldsymbol y(\mathcal{N}_i), \boldsymbol \theta) =\frac{\exp[y(\boldsymbol s_i) A_i\{\boldsymbol y(\mathcal{N}_i)\}]}{ 1 +\exp[y(\boldsymbol s_i) A_i\{\boldsymbol y(\mathcal{N}_i)\}}, \quad y(\boldsymbol s_i)=0,1, 
+$$ 
+with
+\begin{table}[ht!]
+\centering
+\begin{tabular}{| p{2in} | p{4.5in} |}
+\hline
+Model &  Natural parameter function\\
+\hline
+1. Isotropic centered autologistic model with with $\kappa\in(0,1)$, $\eta\in\mathbb{R}$, and $\mathcal{N}_i =\{\boldsymbol s_i\pm (1,0),\boldsymbol s_i\pm (0,1)\}$  & $A_i\{\boldsymbol y(\mathcal{N}_i)\} = \log\left(\frac{\kappa}{1-\kappa}\right) + \eta\sum\limits_{\boldsymbol s_j \in \mathcal{N}_i}\{y(\boldsymbol s_j) - \kappa\}$ \newline \\
+2. Centered autologistic model with $\kappa \in (0,1)$ and dependence parameters $\eta_u,\eta_v\in\mathbb{R}$ in horizontal/vertical directions with $\mathcal{N}_{u,i}=\{\boldsymbol s_i \pm (1,0)\}$, $\mathcal{N}_{v,i}=\{\boldsymbol s_i \pm (0,1)\}$ & $A_i\{\boldsymbol y(\mathcal{N}_i)\} = \log\left(\frac{\kappa}{1-\kappa}\right) + \eta_u\sum\limits_{\boldsymbol s_j \in N_{u,i}}\{y(\boldsymbol s_j) - \kappa\} + \eta_v\sum\limits_{\boldsymbol s_j \in N_{v,i}}\{y(\boldsymbol s_j) - \kappa\}$ \\
+3. Centered autologistic model as in (b) with scale parameter $\kappa_i$ determined by logistic regression ($\beta_0,\beta_1\in\mathbb{R}$) on the horizontal coordinate $u_i$ of location $\boldsymbol s_i=(u_i,v_i)$ & $$A_i\{\boldsymbol y(\mathcal{N}_i)\} = \log\left(\frac{\kappa_i}{1-\kappa_i}\right) + \eta_u\sum\limits_{\boldsymbol s_j \in N_{u,i}}\{y(\boldsymbol s_j) - \kappa_i\} + \eta_v\sum\limits_{\boldsymbol s_j \in N_{v,i}}\{y(\boldsymbol s_j) - \kappa_i\}, \\ \log\left(\frac{\kappa_i}{1-\kappa_i}\right) = \beta_0 + \beta_1 u_i \qquad \qquad \qquad \qquad \qquad \qquad \qquad \qquad \qquad \qquad$$ \\
+\hline
+\end{tabular}
+\caption{Full conditional distributions of three binary MRF models for the endive data.}
+\label{tab:natural-params}
+\end{table}
+
+# Common Spatial Simulation Approach
+
+With common conditionally specified models for spatial lattice, standard MCMC simulation approach via Gibbs sampling is:
+
+Starting from some initial $\boldsymbol Y_*^{(j)}\equiv\{Y_*^{(j)}(\boldsymbol s_1),\ldots,Y_*^{(j)}(\boldsymbol s_n)\}$,
+
+
+1. Moving row-wise, for $i=1,\ldots,n$, individually simulate/update \red{$Y_*^{(j+1)}(\mbs_i)$} for each location \red{$\mbs_i$} from conditional cdf $F$ given
+ \[\blue{Y_*^{(j+1)}(\mbs_1),\ldots,   Y_{*}^{(j+1)}(\mbs_{i-1})},  \quad Y_*^{(j)}(\mbs_{i+1}),\ldots,Y_*^{(j)}(\mbs_n)\]
+    \setlength{\unitlength}{.1in}
+    \hspace*{2cm}\begin{picture}(1,5)
+    \multiput(1,1)(2,0){11}{\circle*{.8}}
+    \multiput(1,3)(2,0){6}{\circle*{.8}}
+    \multiput(13,3)(2,0){1}{\red{\circle*{.8}}}
+    \multiput(15,3)(2,0){4}{\blue{\circle*{.8}}}
+    \multiput(1,5)(2,0){11}{\blue{\circle*{.8}}}
+    \thicklines
+    \put(1,5){\blue{\line(1,0){20}}}
+    \put(21,5){\blue{\line(0,-1){2}}}
+    \put(21,3){\blue{\vector(-1,0){7.6}}}
+    \end{picture}
+2.  $n$ individual updates provide 1 full Gibbs iteration.
+3. Repeat 1-2 to obtain  $M$ resampled spatial data sets $\mbY_*^{(j)}$, $j=1,\ldots,M$ (e.g., can burn-in, thin, etc.)
+
+
+# Conclique-based Gibbs sampler
+
+Using the conditional independence of random variables at locations within a conclique we propose a conclique-based Gibbs sampling algorithm for sampling from a MRF.
+
+1. Split locations into $Q$ disjoint concliques, $\mathcal{D} = \cup_{i = 1}^Q\mathcal{C}_i$.
+1. Initialize the values of $\{Y^{(0)}(\boldsymbol s): \boldsymbol s \in \{\mathcal{C}_2, \dots, \mathcal{C}_Q\}\}$.
+1. Starting from $\mathcal{C}_1$ for the $i^{th}$ iteration, draw $\{ Y^{(i)}(\boldsymbol s) : \boldsymbol s\in \mathcal{C}_1$\}  as random sample where $Y^{(i)}(\boldsymbol s) \stackrel{iid}{\sim} F(y(\boldsymbol s)|Y^{(i-1)}(\boldsymbol t), \boldsymbol t \in \mathcal{N}(\boldsymbol s))$
+1. Update observations conclique-wise (using previous conclique updates). 
+    - For $j=2,\ldots,Q$, draw $\{ Y^{(i)}(\boldsymbol s) : \boldsymbol s\in \mathcal{C}_j$\}  as random sample where $Y^{(i)}(\boldsymbol s) \stackrel{iid}{\sim} F(y(\boldsymbol s)|\{Y^{(i)}(\boldsymbol t), \boldsymbol t \in \mathcal{N}(\boldsymbol s) \cap \mathcal{C}_k \text{ where } k < j\}, \{Y^{(i-1)}(\boldsymbol t), \boldsymbol t \in \mathcal{N}(\boldsymbol s) \cap \mathcal{C}_k \text{ where } k > j\})$
+
+This works by conditional independence & because neighbors for updating one conclique always belong to other concliques.   
+
+# It's (provably) fast!
+
+1. Because we are using batch updating vs. sequential updating of each location, this approach is also **computationally fast**.
+\vspace{.5in}
+1. A flexible `R` package using `Rcpp` (called `conclique`, to appear on CRAN) that implements a conclique-based Gibbs sampler while allowing the user to specify an arbitrary model.
+
+# It's (provably) fast! (Cont'd)
+
+1. While computationally fast, the MCMC sampler is also provably geometrically ergodic (i.e., the MCMC mixes at a fast rate) in a general sense, which is unusual for spatial data.
+\vspace{.2in}
+1. State-of-the-art general theory for proving geometric ergodicity of Gibbs samplers exists only for two-state samplers (i.e., drift & minorization conditions) [@johnson2015geometric].
+    \vspace{.1in}
+    - For common 4-nearest neighbor spatial models, there are exactly 2 concliques (two stages in the conclique-based Gibbs sampler).
+    \vspace{.1in}
+    - One can formally prove that the spatial sampler proposed is geometrically ergodic for lots of conditional spatial models (Gaussian, Gamma, Inverse-gamma, Beta, Binomial, etc.)      
+
+# Timing simulations
+
+```{r timings, fig.height=4, fig.cap="Comparisons of log time for simulation of $M=100, 1000, 5000, 10000$ four-nearest neighbor MRF datasets on a lattice of size $m \\times m$ for various size grids, $m = 5, 10, 20, 30, 50, 75$, using sequential and conclique-based Gibbs samplers.", fig.height=3}
+load("../data/6_timings.RData")
+
+summary_times <- timings %>% 
+  filter(N == 75) %>% 
+  gather(gibbs, time, conclique, sequential) %>% 
+  group_by(gibbs, n.iter) %>% 
+  summarise(mean_time = mean(time)) %>%
+  spread(gibbs, mean_time)
+
+timings %>%
+  gather(gibbs, time, conclique, sequential) %>% ungroup() %>%
+  mutate(n.iter_f = factor(paste("M =", n.iter), levels=unique(paste("M =", timings$n.iter)))) %>%
+  group_by(N, n.iter, gibbs) %>%
+  mutate(mean_time = mean(time)) %>%
+  ggplot() +
+  geom_jitter(aes(N, log(time), colour = gibbs), alpha = .1, size = 2) +
+  geom_line(aes(N, log(mean_time), colour = gibbs), size = 1) +
+  facet_wrap(~n.iter_f, nrow = 1) +
+  xlab("m") +
+  ylab("Log Time (seconds)") +
+  scale_colour_discrete("Gibbs sampler", labels=c("Conclique", "Sequential")) +
+  theme(text = element_text(size=20))
+```
+
+For $10,000$ iterations/samples on $100 \times 100$ grid, conclique-based took $`r round(summary_times$conclique[4], 2)`$ seconds and sequential took $`r round(summary_times$sequential[4], 2)`$ seconds $\approx `r round(summary_times$sequential[4]/(60*60), 2)`$ hours.
+
+# Application 
+
+- An important question for Markov random field models with spatial data is 
+
+> How to assess/diagnose fit? 
+
+- @kaiser2012goodness provide a methodology for performing GOF tests using concliques
+\vspace{.2in}
+- Conclique-based Gibbs sampling allows for fast approximation of the reference distribution for the GOF test statistics in this methodology
+
+# Generalized spatial residuals
+
+\begin{block}{Definition}
+\begin{itemize}
+%\item Let ${\cal R}$ be a spatial lattice on which variables are defined (may be irregular in shape)
+\item   $F(y|\mby(\mathcal{N}_i), \mbtheta)$ is the conditional cdf of $Y(\mbs_i)$ under the model
+\item Substitute random variables, $Y(\mbs_i)$ and neighbors $\{Y(\mbs_j): \mbs_j \in \mathcal{N}_i \}$, into  (continuous) conditional cdf  to define residuals:
+\begin{displaymath}
+R(\mbs_i) = F(Y(\mbs_i)|\{Y(\mbs_j): \mbs_j \in \mathcal{N}_i \}, \mbtheta).
+\end{displaymath}
+\end{itemize}
+\end{block}
+
+\begin{block}{Key Property}
+Let $\{ {\cal C}_j: \, j=1, \ldots, q \}$ be a collection of concliques that partition the integer grid. Under the conditional model, \textbf{spatial residuals {\it within} a conclique are iid  Uniform$(0, 1)$-distributed}: \\
+\begin{displaymath}
+\{ R(\mbs_i): \, \mbs_i \in {\cal C}_j \} \stackrel{iid}{\sim} \mbox{ Uniform}(0, 1) \qquad \text{ for } j=1, \dots, q
+\end{displaymath}
+\end{block}
+
+[@kaiser2012goodness]
+
+# Simple example
+
+\begin{block}{Gaussian Conditional Model - $20 \times 20$ Lattice, 4-nearest Neighbors}
+Let $Y(\boldsymbol s_i) | \boldsymbol y(\mathcal{N}_i) \sim N(\mu(\boldsymbol s_i), \tau^2)$, where $ \mu(\boldsymbol s_i) = \alpha + \eta\sum\limits_{\boldsymbol s_j \in \mathcal{N}_i}(y(\boldsymbol s_j) - \alpha)$.
+
+Truth: $\alpha = 10, \tau^2 = 2, \eta = 0.24.$
+\end{block}
+
+```{r}
+N <- 20
+params <- list(rho = sqrt(2), kappa = 10, eta = .24)
+
+
+#create concliques list -------------------------------
+concliques_4nn <- function(grid) {
+  concliques <- list()
+  concliques[[1]] <- grid[(row(grid) %% 2 == 1 & col(grid) %% 2 == 1) | (row(grid) %% 2 == 0 & col(grid) %% 2 == 0)]
+  concliques[[2]] <- grid[(row(grid) %% 2 == 0 & col(grid) %% 2 == 1) | (row(grid) %% 2 == 1 & col(grid) %% 2 == 0)]
+  class(concliques) <- "conclique_cover"
+  return(concliques)
+}
+
+#create grid, lattices, neighbors, concliques for MCMC ------------------
+grid <- matrix(1:(N*N), nrow = N)
+concliques <- concliques_4nn(grid)
+lattice <- lattice_4nn_torus(dimvec = c(N, N))
+inits <- matrix(rbinom(n = N*N, size = 1, prob = .5), nrow = N)
+neighbors <- get_neighbors(lattice)
+
+#simulate from Normal directly-------------------
+make_IminusC_inv <- function(eta, N) {
+  C <- matrix(0, nrow = N^2, ncol = N^2)
+  for(i in 1:N^2) {
+    C[i, neighbors[[1]][i, -1]] <- eta
+  }
+  I_minus_C <- diag(nrow = N^2, ncol = N^2) - C
+  inv <- try(solve(I_minus_C), silent = TRUE)
+  return(inv)
+}
+IminusC_inv <- make_IminusC_inv(params$eta, N)
+covar <- IminusC_inv %*% diag(params$rho^2, N^2)
+mu <- rep(params$kappa, N^2)
+conclique_dat <- rmvnorm(1, mu, covar)
+
+
+##good model ------
+conclique_resids <- spatial_residuals(conclique_dat, neighbors, "gaussian_single_param", params)
+ecdf_vals <- lapply(concliques, function(conc) {fn <- ecdf(conclique_resids[conc]); fn(conclique_resids[conc])})
+names(ecdf_vals) <- 1:length(concliques)
+ecdf_vals <- do.call(cbind, ecdf_vals) %>% data.frame()
+
+ecdf_vals %>%
+  data.frame() %>%
+  gather(conclique, ecdf) %>%
+  separate(conclique, into = c("junk", "conclique"), 1) -> ecdf_vals
+
+ecdf_vals[, "u"] <- do.call(c, lapply(concliques, function(conc) conclique_resids[conc]))
+
+##bad model -----------
+conclique_resids_err <- spatial_residuals(conclique_dat, neighbors, "gaussian_single_param", list(rho = sqrt(2), kappa = 10, eta = -0.1))
+
+ecdf_vals_err <- lapply(concliques, function(conc) {fn <- ecdf(conclique_resids_err[conc]); fn(conclique_resids_err[conc])})
+names(ecdf_vals_err) <- 1:length(concliques)
+ecdf_vals_err <- do.call(cbind, ecdf_vals_err) %>% data.frame()
+
+ecdf_vals_err %>%
+  data.frame() %>%
+  gather(conclique, ecdf) %>%
+  separate(conclique, into = c("junk", "conclique"), 1) -> ecdf_vals_err
+
+ecdf_vals_err[, "u"] <- do.call(c, lapply(concliques, function(conc) conclique_resids_err[conc]))
+```
+
+```{r conc-fig, fig.show='hold', fig.height=2}
+ecdf_vals %>%
+  ggplot() +
+  geom_point(aes(u, ecdf, colour = conclique), size = 1) +
+  geom_abline(aes(slope = 1, intercept = 0)) +
+  theme(aspect.ratio = 1, legend.position="none") +
+  ggtitle(expression(paste(eta, " = 0.24, (correct)"))) +
+  ylim(c(0, 1)) + xlim(c(0, 1))
+
+
+ecdf_vals_err %>%
+  ggplot() +
+  geom_point(aes(u, ecdf, colour = conclique), size = 1) +
+  geom_abline(aes(slope = 1, intercept = 0)) +
+  theme(aspect.ratio = 1) +
+  ggtitle(expression(paste(eta, " = -0.10, (incorrect)"))) +
+  ylim(c(0, 1)) + xlim(c(0, 1))
+```
+
+# From residuals to test statistics
+
+\begin{block}{Residual Empirical Distribution}
+Divide locations $\{\boldsymbol s_i\}_{i=1}^n$ into concliques:  $\mathcal{C}_{j}$, $j=1,\ldots,q$
+
+For $j^{th}$ conclique, empirical df and and its difference to Uniform$(0,1)$ cdf
+
+\begin{displaymath}
+G_{jn}(u) = \frac{1}{|{\cal C}_{j}|} \sum_{\boldsymbol s_i \in {\cal C}_{j}} I [ R(\mbs_i) \leq u]
+\end{displaymath}
+\vspace{-.4cm}
+\begin{displaymath}
+W_{jn}(u) \equiv n^{1/2} \left[ G_{jn}(u) - u \right]; \, \, \, \, \, u \in [0,1]
+\end{displaymath}
+\end{block}
+
+\begin{block}{Test Statistics}
+\begin{eqnarray}
+T_{1n} & = & \max_{j=1, \ldots, q} \sup_{u \in [0,1]} | W_{jn}(u) | \nonumber \\
+T_{2n} & = &  \frac{1}{q} \sum_{j=1}^{q} \left( \int_0^1 | W_{jn}(u) |^2 du \right)^{1/2}  \nonumber
+\end{eqnarray}
+\end{block}
+
+# Hypothesis testing
+
+\begin{block}{Composite Hypothesis}
+\begin{align*}
+H_0(C):& \text{ The conditional distributions of } \{Y(\boldsymbol s_i): i=1, \ldots, n\} \nonumber \\
+  & \text{ are } F(y(\boldsymbol s_i)|\boldsymbol y(\mathcal{N}_i), \boldsymbol \theta)
+\end{align*}
+
+where $\boldsymbol \theta \in \Theta$ is some \emph{unknown} parameter value
+\end{block}
+
+\begin{block}{Theoretical Challenge}
+Centered residual edfs  $W_{jn}(u)$ are {\it not} independent over concliques \& residuals/test statistics computed from estimated parameter, $\hat{\boldsymbol \theta}$.
+ 
+\begin{itemize}
+\item Asymptotic behavior of test statistics $T_{kn}$ is non-trivial
+\item Resampling is helpful for approximating test statistic $T_{kn}$ distributions
+\end{itemize}
+\end{block}
+
+# In Practice
+
+In application, a conditional distribution $F$ model is formulated/specified.
+
+1. Fit model $\hat{\boldsymbol \theta}$ to original data $Y_1,\ldots,Y_n$
+2. Compute generalized residuals and test statistics: $T_{kn}$
+3. Simulate spatial data $Y_1^*,\ldots,Y_n^*$ from fitted cond. cdf: $F_{\hat{\boldsymbol \theta}}$
+4. Fit model to simulated data:  $\hat{\boldsymbol \theta}^*$
+5. Compute generalized residuals and test statistics: $T_{kn}^*$ from $Y_1^*,\ldots,Y_n^*$ and $F_{\hat{\boldsymbol \theta}^*}$
+6. Do 3-5 many times
+7. Result is reference distribution for test statistic  $T_{kn}$
+
+In simulating/resampling step 3 for spatial data, can use \blue{conclique-based Gibbs sampler} due to the conditional specification $F$ for each location.
+
+# Theory for the  spatial simulation method
+
+Let $P_{n^*}^{(M)}$ denote the joint distribution of spatial data $\boldsymbol Y_{n*}^{(M)}$ at the $M$th iteration of the conclique-based Gibbs sampler from cond. cdf
+$F\equiv F_{\hat{\boldsymbol \theta}_n}$.
+
+\begin{block}{The bootstrap approximation for the GOF statistic is theoretically valid}
+\begin{itemize}
+\item As $M\rightarrow \infty$, $P_{n^*}^{(M)}(T_{kn}^* \leq x) \rightarrow P_{n^*}(T_{kn}^* \leq x) $\\[.2cm]
+Gibbs sampler approximates test  distribution from fitted cond. cdf
+$ F_{\hat{\boldsymbol \theta}_n}$ because the conclique-based Gibbs sampler is \emph{Harris ergodic}.
+\item As $n\rightarrow \infty$, $F_{\hat{\boldsymbol \theta}_n} \stackrel{p}{\rightarrow} F_{ \boldsymbol \theta_0}$ \&
+$P_{n^*}(T_{kn}^* \leq x) - P(T_{kn}\leq x )\stackrel{p}{\rightarrow} 0$\\[.2cm] $T_{kn}^*$-distribution (from joint data distribution induced by fitted cond. cdf $F_{\hat{\boldsymbol \theta}_n}$)
+converges to  $T_{kn}$-distribution (from joint distribution induced by true cond. cdf $F_{\boldsymbol \theta_0}$)
+ \end{itemize}
+\end{block}
+
+This is work in progress with regards to the conclique Gibbs sampler.
+
+
+# Simulated example
+
+```{r lognormal, results='hide'}
+fit_gauss_4nn <- function(data, neighbors, params0) {
+  # score functions
+  score_fns <- function(params, data) {
+    y <- data$y
+    sums <- data$sums
+    nums <- data$nums
+    
+    kappa <- params[1]
+    eta <- params[2]
+    
+    mu <- kappa + eta*sums - nums*kappa*eta
+    
+    c(sum((y - mu)*(1 - nums*eta)), sum((y - mu)*(sums - nums*kappa)))
+  }
+  rho2_hat <- function(kappa_hat, eta_hat, data) {
+    y <- data$y
+    sums <- data$sums
+    nums <- data$nums
+    
+    mu_hat <- kappa_hat + eta_hat*sums - eta_hat*nums*kappa_hat
+    
+    sum((y - mu_hat)^2)/length(y)
+  }
+ 
+  # data prep
+  neigh_vals <- matrix(data[neighbors[[1]][, -1]], ncol = ncol(neighbors[[1]]) - 1)
+  sums <- rowSums(neigh_vals)
+  nums <- rowSums(!is.na(neigh_vals))
+  data <- list(y = data, sums = sums, nums = nums)
+
+  # get estimates
+  params0_vec <- do.call(c, params0[c("kappa", "eta")])
+  mple <- list()
+  roots <- suppressWarnings(multiroot(score_fns, params0_vec, parms = data, maxiter = 2000))
+
+  mple$eta <- roots$root[2]
+  mple$kappa <- roots$root[1]
+  mple$rho <- sqrt(rho2_hat(mple$kappa, mple$eta, data))
+  
+  return(mple)
+}
+
+
+# Computed p-values from test statistics
+lognormal_dat <- exp(conclique_dat)
+
+params0 <- list(rho = sd(lognormal_dat), kappa = mean(lognormal_dat), eta = 0)
+mple_gauss <- fit_gauss_4nn(lognormal_dat, neighbors, params0)
+gof_bs_gauss <- bootstrap_gof(lognormal_dat, concliques, neighbors, inits, "gaussian_single_param", "gaussian_single_param", "fit_gauss_4nn", params0, 5000, "ks", "max", plot.include = TRUE)
+
+params0 <- list(rho = sd(log(lognormal_dat)), kappa = mean(log(lognormal_dat)), eta = 0)
+mple_lognormal <- fit_gauss_4nn(log(lognormal_dat), neighbors, params0)
+gof_bs_lognormal <- bootstrap_gof(log(lognormal_dat), concliques, neighbors, inits, "gaussian_single_param", "gaussian_single_param", "fit_gauss_4nn", params0, 5000, "ks", "max", plot.include = TRUE)
+
+
+
+```
+
+\begin{block}{The GOF procedure is good for distribution discrimination}
+\begin{itemize}
+\item Simulated one realization of lognormal conditionals on $20\times 20$:\\[.2cm]
+  $\log Y(\boldsymbol s_i)$ given neighbors $\{ \boldsymbol s_i + (0,\pm 1), \boldsymbol s_i + (\pm 1, 0) \}$ is normal
+  with variance $\tau^2$ and mean $\mu(\boldsymbol s_i) = \alpha + \eta \sum_{\boldsymbol s_j \in \mathcal{N}_i}[\log y(\boldsymbol s_j)-\alpha]$\\[.1cm]
+\item Fit Gaussian mrf \& fit log Gaussian mrf to data $Y(\boldsymbol s_i)$ using pseudo-likelihood
+\end{itemize}
+\begin{table}
+\footnotesize
+\centering
+\begin{tabular}{ccccc} \hline
+      & Expected       & Conditional  &   & Model \\
+Model  & Value $\alpha$ & Variance $\tau^2$ & Dependence $\eta$& $p-$value \\ \hline
+True & $`r round(params$kappa, 2)`$ & $`r round(params$rho^2, 2)`$ & $`r round(params$eta, 2)`$ & \\
+Log-Gaussian & $`r round(mple_lognormal$kappa, 2)`$ & $`r round(mple_lognormal$rho^2, 2)`$  & $`r round(mple_lognormal$eta, 2)`$ & $`r format(gof_bs_lognormal$p.value, 4)`$ \\
+Gaussian & $`r round(mple_gauss$kappa, 2)`$ & $`r round(mple_gauss$rho^2, 2)`$  & $`r round(mple_gauss$eta, 2)`$ & $`r format(gof_bs_gauss$p.value, 4)`$ \\ \hline
+\end{tabular}
+\end{table}
+\end{block}
+
+# Reference distributions
+
+```{r, fig.show='hold', fig.width=2.5, fig.height=2}
+gof_bs_lognormal$plot
+gof_bs_gauss$plot + xlim(c(2, 8)) + ylab("")
+```
+
+Figure 3: Bootstrapped reference distributions for the maximum across concliques of the Kologorov-Smirnov statistic from data generated from a four-nearest neighbor lognormal MRF with $\tau^2 = 2, \alpha = 10, \eta = 0.24$ and fit with a lognormal (left) and Gaussian (right) model.
+
+# Agricultural field trials example
+
+\begin{block}{The Problem}
+\begin{itemize}
+\item Besag and Higdon (1999) {\em JRSS B} {\bf 36}, 691-746 (with discussion)
+\item Six agricultural field trials with corn
+\item They discuss appropriate Gaussian MRF model of spatial structure
+\end{itemize}
+\end{block}
+\begin{block}{GOF Procedure}
+\begin{itemize}
+\item Can a simple one parameter isotropic Gaussian model be discounted?
+\end{itemize}
+\begin{displaymath}
+\mu(\mbs_i) = \alpha + \eta \sum_{\mbs_i \in \mathcal{N}_i} \{ y(\mbs_i) - \alpha \}
+\end{displaymath}
+\vspace{-.2cm}
+\begin{itemize}
+\item Four nearest neighbors, $2$ concliques of sizes $93$ and $94$
+\item Maximum pseudo-likelihood estimation (e.g., Besag, 1974)
+\item Parametric bootstrap for $5000$ data sets
+\item Gibbs, burn-in of $500$
+\end{itemize}
+\end{block}
+
+# Agricultural field trials results
+
+
+```{r besag-trials}
+data(besag.met)
+dat <- besag.met %>% filter(row != 18) #irregular grid
+N1 <- max(dat$row)
+N2 <- max(dat$col)
+
+grid <- matrix(1:(N1*N2), nrow = N1)
+concliques <- concliques_4nn(grid)
+lattice <- lattice_4nn_torus(dimvec = c(N1, N2))
+inits <- matrix(rbinom(n = N1*N2, size = 1, prob = .5), nrow = N1)
+neighbors <- get_neighbors(lattice)
+
+gof_bs_besag_ks_max <- lapply(unique(dat$county), function(cnty) {
+  data <- dat[dat$county == cnty, ]
+  data <- data %>% arrange(row, col) %>% .[, "yield"]
+  
+  params0 <- list(rho = sd(data), kappa = mean(data), eta = 0)
+
+  bootstrap_gof(data, concliques, neighbors, inits, "gaussian_single_param", "gaussian_single_param", "fit_gauss_4nn", params0, 5000, "ks", "max", plot.include = TRUE)
+})
+
+gof_bs_besag_cvm_mean <- lapply(unique(dat$county), function(cnty) {
+  data <- dat[dat$county == cnty, ]
+  data <- data %>% arrange(row, col) %>% .[, "yield"]
+  
+  params0 <- list(rho = sd(data), kappa = mean(data), eta = 0)
+  
+  bootstrap_gof(data, concliques, neighbors, inits, "gaussian_single_param", "gaussian_single_param", "fit_gauss_4nn", params0, 5000, "cvm", "mean", plot.include = TRUE)
+})
+
+```
+
+
+\begin{table}
+\begin{center}
+\footnotesize
+\begin{tabular}{ccccccc} \hline
+& \multicolumn{6}{c}{Trial} \\
+Statistic & 1 & 2& 3 & 4 & 5 & 6 \\ \hline
+$T_{1n}$ & $`r round(gof_bs_besag_ks_max[[1]]$p.value, 4)`$ & $`r round(gof_bs_besag_ks_max[[2]]$p.value, 4)`$ & $`r round(gof_bs_besag_ks_max[[3]]$p.value, 4)`$ & $`r round(gof_bs_besag_ks_max[[4]]$p.value, 4)`$ & $`r round(gof_bs_besag_ks_max[[5]]$p.value, 4)`$ & $`r round(gof_bs_besag_ks_max[[6]]$p.value, 4)`$ \\
+$T_{2n}$ & $`r round(gof_bs_besag_cvm_mean[[1]]$p.value, 4)`$ & $`r round(gof_bs_besag_cvm_mean[[2]]$p.value, 4)`$ & $`r round(gof_bs_besag_cvm_mean[[3]]$p.value, 4)`$ & $`r round(gof_bs_besag_cvm_mean[[4]]$p.value, 4)`$ & $`r round(gof_bs_besag_cvm_mean[[5]]$p.value, 4)`$ & $`r round(gof_bs_besag_cvm_mean[[6]]$p.value, 4)`$ \\ \hline
+\end{tabular}
+\end{center}
+\caption{GOF test statistic p-values for the one-parameter Gaussian model.}
+\end{table}
+
+```{r ag-ecdfs, fig.height=2}
+#Loc 1---
+data <- dat[dat$county == "C1", ]
+data <- data %>% arrange(row, col) %>% .[, "yield"]
+c1_params0 <- list(rho = sd(data), kappa = mean(data), eta = 0)
+c1_params <- fit_gauss_4nn(data, neighbors, c1_params0)
+c1_resids <- spatial_residuals(data, neighbors, "gaussian_single_param", c1_params)
+c1_ecdf_vals <- lapply(concliques, function(conc) {fn <- ecdf(c1_resids[conc]); fn(c1_resids[conc])})
+names(c1_ecdf_vals) <- 1:length(concliques)
+c1_ecdf_vals[[2]] <- c(c1_ecdf_vals[[2]], NA)
+c1_ecdf_vals <- do.call(cbind, c1_ecdf_vals) %>% data.frame()
+
+c1_ecdf_vals %>%
+  data.frame() %>%
+  gather(conclique, ecdf) %>%
+  filter(!is.na(ecdf)) %>%
+  separate(conclique, into = c("junk", "conclique"), 1) -> c1_ecdf_vals
+
+c1_ecdf_vals[, "u"] <- do.call(c, lapply(concliques, function(conc) c1_resids[conc]))
+
+c1_ecdf_vals %>%
+  ggplot() +
+  geom_point(aes(u, ecdf, colour = conclique), size = 1) +
+  geom_abline(aes(slope = 1, intercept = 0)) +
+  theme(aspect.ratio = 1, legend.position="none") +
+  ggtitle("Trial 1") +
+  ylim(c(0, 1)) + xlim(c(0, 1))
+
+#Loc 3---
+data <- dat[dat$county == "C3", ]
+data <- data %>% arrange(row, col) %>% .[, "yield"]
+c3_params0 <- list(rho = sd(data), kappa = mean(data), eta = 0)
+c3_params <- fit_gauss_4nn(data, neighbors, c1_params0)
+c3_resids <- spatial_residuals(data, neighbors, "gaussian_single_param", c3_params)
+c3_ecdf_vals <- lapply(concliques, function(conc) {fn <- ecdf(c3_resids[conc]); fn(c3_resids[conc])})
+names(c3_ecdf_vals) <- 1:length(concliques)
+c3_ecdf_vals[[2]] <- c(c3_ecdf_vals[[2]], NA)
+c3_ecdf_vals <- do.call(cbind, c3_ecdf_vals) %>% data.frame()
+
+c3_ecdf_vals %>%
+  data.frame() %>%
+  gather(conclique, ecdf) %>%
+  filter(!is.na(ecdf)) %>%
+  separate(conclique, into = c("junk", "conclique"), 1) -> c3_ecdf_vals
+
+c3_ecdf_vals[, "u"] <- do.call(c, lapply(concliques, function(conc) c3_resids[conc]))
+
+c3_ecdf_vals %>%
+  ggplot() +
+  geom_point(aes(u, ecdf, colour = conclique), size = 1) +
+  geom_abline(aes(slope = 1, intercept = 0)) +
+  theme(aspect.ratio = 1) +
+  ggtitle("Trial 3") +
+  ylim(c(0, 1)) + xlim(c(0, 1))
+
+
+```
+
+# `conclique`
+
+R package (to appear on CRAN) can be installed via GitHub using the following `R` code.
+
+```{r, eval=FALSE, echo=TRUE}
+devtools::install_github("andeek/conclique")
+```
+
+- Convenience functions `lattice_4nn_torus` and `min_conclique_cover`
+\vspace{.1in}
+- Gibbs samplers `run_conclique_gibbs` and `run_sequential_gibbs`
+\vspace{.1in}
+- GOF functions `spatial_residuals` and `gof_statistics`
+\vspace{.1in}
+- Convenience function `bootstrap_gof` 
+
+# Extending `conclique`
+
+One of the **key advantages** to using conclique-based approaches for simulation (and GOF tests) is the ability to consider non-Gaussian conditional models that go beyond a four-nearest neighbor structure.
+
+`conclique` is generalizable in
+
+- Dependence structure - beyond four-nearest neighbor
+- Conditional distribution for each spatial location - beyond Gaussian and binary
+- Generalized spatial residuals - for a user-supplied conditional distribution
+- GOF statistics - aggregation beyond mean and max
+
+# Future work and ideas
+
+- Goodness-of-fit test for network data
+    - The model-based method of resampling re-frames network into a collection of (Markovian) neighborhoods by using covariate information
+    - Creates concliques on a graph structure
+    - Use a conditionally specified network distribution (@casleton2017local) to sample network data in a blockwise conclique-based Gibbs sampler.
+- Extension for multilayer networks
+    - Layer-level dependence parameter 
+    - Utilization of single layer for neighborhood creation
+- Bootstrap theory for approximating GOF statistics is ongoing work
+
+# Thank you
+
+* Slides -- <http://bit.ly/kaplan-duke>
+
+* Contact
+    * Email -- <ajkaplan@iastate.edu>
+    * Twitter -- <http://twitter.com/andeekaplan>
+    * GitHub -- <http://github.com/andeek>
+
+
+# References
+
+\footnotesize
