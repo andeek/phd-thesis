@@ -29,7 +29,7 @@ We have the following properties:
 Let $m,n\geq 1$ and suppose the random vector $(\bm{V}_m,\bm{H}_n) = (V_1,\ldots,V_m, H_1,\ldots,H_n)$ follows a RBM$(m,n,\bm{\theta})$ distribution. Let $\bm{\theta}_1,\bm{\theta}_2 \in \mathbb{R}^{m+n+mn}$ and
 let $P_i$ and $\E$ denote probability and expectation under $\bm{\theta}_i$, $i=1,2$. Then, the following are equivalent
 
-1. $\E_1 V_i=\E_2 V_i$, $\E_1 H_j=\E_2 H_j$ and $\E_1 V_i H_j =\E_2 V_i H_j  $ for any $i=1,\ldots,m$, $j=1,\ldots,n$.
+1. $\E_1 V_i=\E_2 V_i$, $\E_1 H_j=\E_2 H_j$ and $\E_1 V_i H_j =\E_2 V_i H_j$ for any $i=1,\ldots,m$, $j=1,\ldots,n$.
 2. $\bm{\theta}_1 =\bm{\theta}_2$.
 3. $P_1$ and  $P_2$ are the same distribution for  $(\bm{V}_m,\bm{H}_n)$.\\
 
