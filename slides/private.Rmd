@@ -149,6 +149,55 @@ $$
 
 # Deep learning
 
+- $M$ the number of hidden layers included in the model 
+- $N_{(H,1)}, \dots, N_{((H,M))}$ the number of hidden variables within each hidden layer
+- $\tilde{\boldsymbol X} = \{H^{(1)}_1, \dots, H^{(1)}_{N_{(H,1)}}, \dots, H^{(M)}_1, \dots, H^{(M)}_{N_{(H,M)}}, \boldsymbol X\}$ 
+    - Hidden variables $\{ H_{i}^{(j)} : i=1,\ldots, N_{(H,j)}, j=1,\ldots,M\}$ 
+    - Visible variables $\boldsymbol X =(X_1,\ldots,X_N)$
+    - $H_{i}^{(j)}, X_k \in \mathcal{X} = \{-1,1\}$ for all $i, j, k$
+
+\vfill
+
+Two models with "deep architecture" that contain multiple hidden layers in addition to a visible layer of data
+
+1. Deep Boltzmann machine (DBM)
+2. Deep belief network (DBN)
+    
+# Deep Boltzmann machine (DBM)
+
+Stacked RBMs with conditional dependence between neighboring layers.
+
+Joint pmf:
+\footnotesize
+\vspace{-.1in}
+\begin{align*}
+&P_{\boldsymbol \theta_N} (\tilde{\boldsymbol x}) = \exp\left[ \sum\limits_{i = 1}^M\boldsymbol \alpha^{(i)T} \boldsymbol h^{(i)} + \boldsymbol \beta^T \boldsymbol x + \boldsymbol h^{(1)T} \Gamma^{(0)} \boldsymbol x + \sum\limits_{i = 1}^{M - 1} \boldsymbol h^{(i)T} \Gamma^{(i)} \boldsymbol h^{(i + 1)} - \psi(\boldsymbol \theta_N) \right], \\
+&\tilde{\boldsymbol x} = (\boldsymbol h^{(1)}, \dots, \boldsymbol h^{(M)}, \boldsymbol x) \in \mathcal{X}^{N_{(H,1)} + \cdots + N_{(H,M)} +N}
+\end{align*}
+\normalsize
+
+- Let $\boldsymbol \theta_N = (\boldsymbol \alpha^{(1)}, \dots, \boldsymbol \alpha^{(M)}, \boldsymbol \beta,\Gamma^{(0)}, \dots, \Gamma^{(M - 1)}) \in \Theta_N \subset \mathbb{R}^{q(N)}$, 
+    \footnotesize
+    $$
+    q(N)= N_{(H,1)}+\cdots N_{(H,M)} + N + N_{(H,1)}*N+N_{H,2}*H_{(H,1)}+\cdots +N_{(H,M)}*H_{(H,M)-1}
+    $$
+    \normalsize
+- The probability mass function for $X_1, \dots, X_N$ follows from marginalization of the joint pmf
+- The visible DBM model specification is an example of a \blue{FSFS model}.
+
+
+# Deep belief network (DBN)
+
+- **Similar** to a DBM: Multiple layers of latent random variables stacked in a deep architecture with no conditional dependence between layers 
+\vspace{.1in}
+- **Difference**: all but the last stacked layer in a DBN are Bayesian networks [see @pearl985bayesian]
+\vspace{.1in}
+    - A "weight" parameter is placed on each interaction between visibles, $X_1, \dots, X_N$ and the first layer of latent variables, $H^{(1)}_1, \dots, H^{(1)}_{N_{(H,1)}}$
+\vspace{.1in}    
+    - The number $q(N)$ of components in the parameter vector is dependent on the dimension of the visibles
+\vspace{.1in}    
+- For visibles $X_1, \dots, X_N$ with support $\mathcal{X}^N$, a DBN is also a \blue{FSFS model}
+
 # Instability results
 
 # Implications

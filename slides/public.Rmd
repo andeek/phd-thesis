@@ -1135,7 +1135,6 @@ converges to  $T_{kn}$-distribution (from joint distribution induced by true con
 
 This is work in progress with regards to the conclique Gibbs sampler.
 
-
 # Simulated example
 
 ```{r lognormal, results='hide'}
