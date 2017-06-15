@@ -1,0 +1,133 @@
+---
+title: "A note on the instability and degeneracy of deep learning models"
+shorttitle: "Instability"
+author: Andee Kaplan
+shortname: Kaplan, et al.
+institute: |
+    | Iowa State University
+    | ajkaplan@iastate.edu
+shortinstitute: ajkaplan@iastate.edu
+date: |
+  | June 22, 2017
+  |
+  | Slides available at <http://bit.ly/kaplan-private>
+  |
+  | \footnotesize Joint work with D. Nordman and S. Vardeman
+shortdate: "June 22, 2017"
+output: 
+  beamer_presentation:
+    keep_tex: false
+    template: beamer.tex
+    includes:
+      in_header: front-matter.tex
+theme: CambridgeUS
+bibliography: [../resources/refs_rbm.bib]
+fig_caption: true
+nocite: |
+
+---
+
+```{r libraries, echo=FALSE, message=FALSE, warning=FALSE, cache=FALSE}
+library(knitr)
+library(ggplot2)
+library(dplyr)
+library(tidyr)
+library(xtable)
+
+
+set.seed(1022)
+opts_chunk$set(echo=FALSE, message=FALSE, warning=FALSE, cache=TRUE)
+theme_set(theme_bw(base_family = "serif", base_size = 20))
+```
+
+# Introduction
+
+- A probability model exhibits *instability* if small changes in a data outcome result in large changes in probability
+- Model *degeneracy* implies placing all probability on a small portion of the sample space
+
+\vfill
+
+**Goal:** Quantify instability for general probability models defined on sequences of observations, where each sequence of length $N$ has a finite number of possible outcomes
+
+\vfill
+
+\begin{block}{Notation}
+\begin{itemize}
+\itemsep .2in
+\item $\boldsymbol X = (X_1, \dots, X_N)$ a set of discrete random variables with a finite sample space, $\mathcal{X}^N$
+\item For each $N$, $P_{\boldsymbol \theta_N}$ is a probability model on $\mathcal{X}^N$
+\end{itemize}
+\end{block}
+
+# FSFS models
+
+\begin{block}{Finitely Supported Finite Sequence (FSFS) model class}
+A series $P_{\boldsymbol \theta_N}$ of probability models, indexed by a generic sequence of parameters $\boldsymbol \theta_N$, to describe data of each length $N \geq 1$ with model support of $P_{\boldsymbol \theta_N}$ equaling the (finite) sample space $\mathcal{X}^N$. 
+\end{block}
+
+\vfill
+
+- The size and structure of such parameters $\boldsymbol \theta_N$ are without restriction 
+\vspace{.2in}
+- Natural cases include $\boldsymbol \theta_N \in \mathbb{R}^{q(N)}$ for some arbitrary integer-valued function $q(\cdot) \geq 1$
+
+# Discrete exponential family models
+
+Exponential family model for $\boldsymbol X$ with pmf of the form
+$$
+p_{N, \boldsymbol \lambda}(\boldsymbol x) = \exp\left[\boldsymbol\eta^T(\boldsymbol \lambda) \boldsymbol g_N(\boldsymbol x) - \psi(\boldsymbol \lambda)\right], \quad \boldsymbol x \in \mathcal{X}^N,
+$$ 
+for fixed positive dimensions of the parameter, $\boldsymbol \lambda \in \Lambda \subset \mathbb{R}^{k}$ and natural parameter $\boldsymbol \eta : \mathbb{R}^k \mapsto \mathbb{R}^L$ spaces, $\boldsymbol g_N : \mathcal{X}^N \mapsto \mathbb{R}^L$ a vector of sufficient statistics, 
+$$
+\psi(\boldsymbol \lambda) = \log \sum\limits_{\boldsymbol x \in \mathcal{X}^N}\exp\left[\boldsymbol \eta^T(\boldsymbol \lambda) \boldsymbol g_N(\boldsymbol x) \right], \qquad \boldsymbol \lambda \in \Lambda,
+$$
+the normalizing function, and $\Lambda = \{\boldsymbol \lambda \in \mathbb{R}^k : \psi(\boldsymbol \lambda) < \infty, k \le q(N) \}$ is the parameter space. 
+
+
+# Discrete exponential family models (cont'd)
+
+- Such models arise with 
+\vspace{.1in}
+    - Spatial data on a lattice [@besag1974spatial]
+\vspace{.1in}    
+    - Network data [@wasserman1994social; @handcock2003assessing] 
+\vspace{.1in}    
+    - Binomial sampling with $N$ iid Bernoulli random variables
+\vspace{.1in}    
+- These models are special cases of the \blue{FSFS models}
+\vspace{.1in}
+- $P_{\boldsymbol \theta_N}(\boldsymbol x)\equiv p_{N,\boldsymbol \lambda_N}(\boldsymbol x)$ with $\boldsymbol \theta_N=\boldsymbol \lambda_N$ a sequence of elements of $\Lambda \subset \mathbb{R}^k$ 
+\vspace{.1in}
+- $P_{\boldsymbol \theta_N}(\boldsymbol x) > 0$ for all $\boldsymbol x \in \mathcal{X}^N$
+\vspace{.1in}
+- The dimension of the parameter $\boldsymbol \theta_N$ is the same for each $N$ ($k$) 
+\vspace{.1in}
+- @schweinberger2011instability considered *instability* in such exponential models 
+
+
+# Restricted Boltzmann machines
+
+# Deep learning
+
+# Instability results
+
+# Implications
+
+# Thank you
+
+Questions?
+
+
+\vfill
+
+* Slides -- <http://bit.ly/kaplan-private>
+\vspace{.1in}
+* Contact
+    * Email -- <ajkaplan@iastate.edu>
+    * Twitter -- <http://twitter.com/andeekaplan>
+    * GitHub -- <http://github.com/andeek>
+
+
+# References {.allowframebreaks} 
+
+\tiny
