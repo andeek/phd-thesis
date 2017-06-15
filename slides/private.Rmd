@@ -107,6 +107,46 @@ the normalizing function, and $\Lambda = \{\boldsymbol \lambda \in \mathbb{R}^k 
 
 # Restricted Boltzmann machines
 
+\begin{columns}[T] % align columns
+\begin{column}{.5\textwidth}
+\begin{figure}
+  \centering
+  \resizebox{\linewidth}{!}{\input{images/rbm.tikz}}
+  \caption{An example restricted Boltzmann machine (RBM). Hidden nodes are indicated by gray filled circles and the visible nodes indicated by unfilled circles.}
+  \label{fig:rbm}
+\end{figure}
+\vfill
+\end{column}
+\hfill
+\begin{column}{.48\textwidth}
+\begin{itemize}
+\item $\mathcal{X} = \{-1,1\}$
+\item $\boldsymbol X=(X_1,\ldots,X_N)$: $N$ random variables for visibles with support $\mathcal{X}^N$ 
+\item $\boldsymbol H=(H_1,\ldots,H_{N_H})$: $N_H$ random variables for hiddens with support $\mathcal{X}^{N_H}$ 
+\item Parameters $\boldsymbol \alpha \in \mathbb{R}^{N_H}$, $\boldsymbol \beta \in \mathbb{R}^N$, $\Gamma$ a matrix of size $N_H \times N$ ($\boldsymbol \theta_N = (\boldsymbol \alpha, \boldsymbol \beta,\Gamma) \in \Theta_N \subset \mathbb{R}^{q(N)}$ with $q(N) = N + N_H + N*N_H$)
+\end{itemize}
+\end{column}
+\end{columns}
+
+Joint pmf:
+$$
+P_{\boldsymbol \theta_N} (\tilde{\boldsymbol x}) = \exp\left[ \boldsymbol \alpha^T \boldsymbol h + \boldsymbol \beta^T \boldsymbol x + \boldsymbol h^T \Gamma \boldsymbol x - \psi(\boldsymbol \theta_N)\right], \quad \tilde{\boldsymbol x} = (\boldsymbol h, \boldsymbol x) \in \mathcal{X}^{N+N_H}
+$$
+
+# Restricted Boltzmann machines (cont'd)
+
+- The pmf for the visible variables $X_1, \dots, X_N$ follows from marginalization:
+    $$
+    P_{\boldsymbol \theta_N} (\boldsymbol x) = \sum\limits_{\boldsymbol h \in \mathcal{X}^{N_H}} P_{\boldsymbol \theta_N} (\boldsymbol x, \boldsymbol h), \qquad \boldsymbol x \in \mathcal{X}^N.
+    $$
+- Size of $\boldsymbol \theta_N$, $q(N)$, increases as a function of sample dimension $N$
+\vspace{.1in}
+- Can choose the number $N_H$ of hidden variables to change with $N$ (potentially increase) 
+\vspace{.1in}
+- The RBM model specification for visibles is a \blue{FSFS model}
+\vspace{.1in}
+- Models formed by marginalizing a base FSFS model (e.g., a type of exponential family model) is again a \blue{FSFS model} class
+
 # Deep learning
 
 # Instability results
