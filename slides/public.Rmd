@@ -1140,8 +1140,6 @@ where $\boldsymbol \theta \in \Theta$ is some \emph{unknown} parameter value
 
 # Simple example
 
-<!-- TODO: consider residuals over concliques -->
-
 \begin{block}{Gaussian Conditional Model - $20 \times 20$ Lattice, 4-nearest Neighbors}
 Let $Y(\boldsymbol s_i) | \boldsymbol y(\mathcal{N}_i) \sim N(\mu(\boldsymbol s_i), \tau^2)$, where $ \mu(\boldsymbol s_i) = \alpha + \eta\sum\limits_{\boldsymbol s_j \in \mathcal{N}_i}(y(\boldsymbol s_j) - \alpha)$.
 

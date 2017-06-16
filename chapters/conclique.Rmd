@@ -905,7 +905,7 @@ Suppose a MRF model for $\{Y(\boldsymbol s_i): i = 1, \dots, n\}$ admits two con
 Theorem \ref{thm:gibbs_harris} also holds for two additional Gibbs samplers (RQGS and RSGS) described in Appendix \@ref(appendix-samplers) in addition to the CGS. See Appendix \@ref(appendix-ergodicity) for proof.
 \end{remark}
 
-Theorem \ref{thm:2} automatically ensures geometric ergodicity of the conclique-based sampler for several four-nearest neighbor MRF models having compact support $\mathcal{X}$ for $\{Y(\boldsymbol s_1),\ldots,Y(\boldsymbol s_n)\}$, such as the the autologistic binary, the conditional binomial, the conditional Beta, and the Multinomial distributions as well as the windsorized Poisson model of @kaiser1997modeling.
+Theorem \ref{thm:2} automatically ensures geometric ergodicity of the conclique-based sampler for several four-nearest neighbor MRF models having compact support $\mathcal{X}$ for $\{Y(\boldsymbol s_1),\ldots,Y(\boldsymbol s_n)\}$, such as the autologistic binary, the conditional binomial, the conditional Beta, and the Multinomial distributions as well as the windsorized Poisson model of @kaiser1997modeling.
 
 Furthermore, the geometric ergodicity of the conclique-based Gibbs sampling algorithm can also be established for four-nearest neighborhood MRF models with unbounded support. Theorem \ref{thm:cases} treats three such cases of conditional distributions in the form of centered versions of the Gaussian, Inverse Gaussian, and Truncated Gamma MRF models. These models belong to exponential families, with conditional densities of the form
 
