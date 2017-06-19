@@ -175,7 +175,7 @@ This generalizes "unstable" from @schweinberger2011instability by allowing
 1. non-exponential family models and 
 2. an increasing number of parameters
 
-Differs in form but matches @schweinberger2011instability for expo. models there
+Differs in form but matches @schweinberger2011instability for exponential models
 
 # Consequences of S-instability
 
