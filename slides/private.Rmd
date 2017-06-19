@@ -47,7 +47,7 @@ theme_set(theme_bw(base_family = "serif", base_size = 20))
 
 \vfill
 
-**Goal:** Quantify instability for general probability models defined on sequences of observations, where each sequence of length $N$ has a finite number of possible outcomes
+**Goal:** Quantify instability for a general and broad class of probability models defined on sequences of observations, where each sequence of length $N$ has a finite number of possible outcomes
 
 \vfill
 
@@ -62,7 +62,7 @@ theme_set(theme_bw(base_family = "serif", base_size = 20))
 # FSFS models
 
 \begin{block}{Finitely Supported Finite Sequence (FSFS) model class}
-A series $P_{\boldsymbol \theta_N}$ of probability models, indexed by a generic sequence of parameters $\boldsymbol \theta_N$, to describe data of each length $N \geq 1$ with model support of $P_{\boldsymbol \theta_N}$ equaling the (finite) sample space $\mathcal{X}^N$. 
+A series $P_{\boldsymbol \theta_N}$ of probability models, indexed by a generic sequence of parameters $\boldsymbol \theta_N$, for describing data of length $N \geq 1$. The model support of $P_{\boldsymbol \theta_N}$ equals the (finite) sample space $\mathcal{X}^N$. 
 \end{block}
 
 \vfill
@@ -77,11 +77,11 @@ Exponential family model for $\boldsymbol X$ with pmf of the form
 $$
 p_{N, \boldsymbol \lambda}(\boldsymbol x) = \exp\left[\boldsymbol\eta^T(\boldsymbol \lambda) \boldsymbol g_N(\boldsymbol x) - \psi(\boldsymbol \lambda)\right], \quad \boldsymbol x \in \mathcal{X}^N,
 $$ 
-for fixed positive dimensions of the parameter, $\boldsymbol \lambda \in \Lambda \subset \mathbb{R}^{k}$ and natural parameter $\boldsymbol \eta : \mathbb{R}^k \mapsto \mathbb{R}^L$ spaces, $\boldsymbol g_N : \mathcal{X}^N \mapsto \mathbb{R}^L$ a vector of sufficient statistics, 
+with parameter $\boldsymbol \lambda \in \Lambda \subset \mathbb{R}^{k}$ and natural parameter function $\boldsymbol \eta : \mathbb{R}^k \mapsto \mathbb{R}^L$ spaces, $\boldsymbol g_N : \mathcal{X}^N \mapsto \mathbb{R}^L$ a vector of sufficient statistics, normalizing function
 $$
 \psi(\boldsymbol \lambda) = \log \sum\limits_{\boldsymbol x \in \mathcal{X}^N}\exp\left[\boldsymbol \eta^T(\boldsymbol \lambda) \boldsymbol g_N(\boldsymbol x) \right], \qquad \boldsymbol \lambda \in \Lambda,
 $$
-the normalizing function, and $\Lambda = \{\boldsymbol \lambda \in \mathbb{R}^k : \psi(\boldsymbol \lambda) < \infty, k \le q(N) \}$ is the parameter space. 
+and $\Lambda = \{\boldsymbol \lambda \in \mathbb{R}^k : \psi(\boldsymbol \lambda) < \infty, k \le q(N) \}$ is the parameter space (fixed $k, L$ above). 
 
 
 # Discrete exponential family models (cont'd)
@@ -92,7 +92,7 @@ the normalizing function, and $\Lambda = \{\boldsymbol \lambda \in \mathbb{R}^k 
 \vspace{.1in}    
     - Network data [@wasserman1994social; @handcock2003assessing] 
 \vspace{.1in}    
-    - Binomial sampling with $N$ iid Bernoulli random variables
+    - Standard independence models for discrete data ($N$ iid Bernoulli variables)
 \vspace{.1in}    
 - These models are special cases of the \blue{FSFS models}
 \vspace{.1in}
@@ -100,7 +100,7 @@ the normalizing function, and $\Lambda = \{\boldsymbol \lambda \in \mathbb{R}^k 
 \vspace{.1in}
 - $P_{\boldsymbol \theta_N}(\boldsymbol x) > 0$ for all $\boldsymbol x \in \mathcal{X}^N$
 \vspace{.1in}
-- The dimension of the parameter $\boldsymbol \theta_N$ is the same for each $N$ ($k$) 
+- The dimension $k$ of the parameter $\boldsymbol \theta_N$ is the same for each $N$
 \vspace{.1in}
 - @schweinberger2011instability considered *instability* in such exponential models 
 
@@ -170,10 +170,12 @@ Let $\boldsymbol \theta_N \in \mathbb{R}^{q(N)}$ be a sequence of FSFS model par
 \end{align*}
 \end{block}
 
-This is a generalization of "unstable" used in @schweinberger2011instability by allowing 
+This generalizes "unstable" from @schweinberger2011instability by allowing 
 
 1. non-exponential family models and 
 2. an increasing number of parameters
+
+Differs in form but matches @schweinberger2011instability for expo. models there
 
 # Consequences of S-instability
 
@@ -190,7 +192,7 @@ $$\Delta_N(\boldsymbol \theta_N) > C.$$
 
 \vfill
 
-If the scaled ELPR is large, then the FSFS model will exhibit large changes in probability for very small differences in the data configuration
+If the scaled ELPR is large, then the FSFS model can exhibit large changes in probability for small differences in the data configuration
 
 # Tie to degeneracy
 
@@ -209,7 +211,7 @@ $$
 
 \vfill
 
-In S-unstable FSFS models, all probability in the model formulation with a large number of random variables will concentrate mass on mode sets of arbitrarily small size
+In S-unstable FSFS models, all probability in the model formulation with a large number of random variables will concentrate mass on an $\epsilon$-mode set for any arbitrarily small $\epsilon$ (potentially small set of outcomes with most probability)
 
 # Implications
 

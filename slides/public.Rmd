@@ -58,7 +58,7 @@ theme_set(theme_bw(base_family = "serif", base_size = 20))
     (Ch. 4 & 5)
 
 
-# Goal
+# This talk
 
 - Markov random field models are popular for spatial or network data
 \vspace{.2in}
@@ -67,7 +67,7 @@ theme_set(theme_bw(base_family = "serif", base_size = 20))
 - Conditional distributions are assumed to correspond to a valid joint (e.g., sufficient conditions in @kaiser2000construction)
 
 \vspace{.4in}
-**Goal:** A new, provably fast approach for simulating spatial/network data
+**Goal:** A new, provably fast approach for simulating spatial/network data under a Markov model
 
 
 
@@ -89,7 +89,7 @@ theme_set(theme_bw(base_family = "serif", base_size = 20))
 \end{itemize}
 \end{block}
 
-Formulation adaptable to non-spatial data by letting $\boldsymbol s_i$ denote a marker for observation $Y(\boldsymbol s_i)$ (e.g., random graphs, $\boldsymbol s_i$ represents a potential edge and $Y(\boldsymbol s)\in\{0,1\}$)   
+Formulation adaptable to non-spatial data letting $\boldsymbol s_i$ be a marker for observation $Y(\boldsymbol s_i)$ (e.g., random graphs: $\boldsymbol s_i$ represents a potential edge and $Y(\boldsymbol s_i)\in\{0,1\}$)   
 
 # Common neighborhood structures
 
@@ -211,7 +211,7 @@ Model &  Natural parameter function\\
 
 - Fit three models of increasing complexity to these data via pseudo-likelihood [@besag1975statistical]  
 - Apply simulation (parametric bootstrap) to obtain reference distributions for statistics based on the resulting estimators
-- This involves the Gibbs sampler (due to the conditional model specification) & where computational demands arise
+- This involves the Gibbs sampler (due to the conditional model specification), where computational demands arise
 
 ```{r endive-model-setup}
 #create concliques list -------------------------------
@@ -528,7 +528,7 @@ print(endive_table, add.to.row = addtorow, sanitize.text.function = function(x){
 
 Bootstrap percentile confidence intervals in all three autologistic models
 
-# Sampling distributions of dependence parameters
+# Sampling distributions via bootstrap simulation
 
 ```{r endive-param-plot, out.height='2.75in'}
 # one param
@@ -642,9 +642,9 @@ tmp <- run_sequential_gibbs(neighbors_two_param, inits, "sampler_two_param_reg",
 seq_time_m2 <- difftime(Sys.time(), time, units = "secs")
 ```
 
-- Endive example dataset simulations performed with the proposed (conclique-based) Gibbs sampler (to follow)
+- Endive example dataset simulations performed with the proposed (conclique-based) Gibbs sampler to follow
 - Reported results would have been virtually identical with the same number of iterations to the standard sequential Gibbs sampler
-- Generation of the reference distribution using the standard sampler would have taken approximately 
+- By model, generation of the reference distribution using the standard sampler would have taken approximately 
     1. $`r round((seq_time_m0 - conc_time_m0)/100*B/60, 2)`$ minutes longer  
     2. $`r round((seq_time_m1 - conc_time_m1)/100*B/60, 2)`$ minutes longer
     3. $`r round((seq_time_m2 - conc_time_m2)/100*B/60, 2)`$ minutes longer 
@@ -726,7 +726,7 @@ $$
 \end{columns}
 \end{block}
 
-# Generalized spatial residuals @kaiser2012goodness
+# Generalized spatial residuals \small (Kaiser, Lahiri, and Nordman 2012)
 
 \begin{block}{Definition}
 \begin{itemize}
@@ -782,13 +782,13 @@ This works by conditional independence & because neighbors for updating one conc
 
 \begin{block}{Conclique positivity condition}
 \label{condition:conc-pos}
-The full conditionals for the MRF model specify a valid joint distribution $\Pi(\cdot)$ for $(Y(\boldsymbol s_1), \dots, Y(\boldsymbol s_n))$ with density/mass function $\pi(\cdot)$ having support $\mathcal{X} \subset \mathbb{R}^n$. For the collected $\mathcal{C}_1, \dots, \mathcal{C}_Q$ of concliques under the MRF model, it holds that
-$\mathcal{X} = \mathcal{X}_1 \times \cdots \times \mathcal{X}_Q$ where $\mathcal{X}_i$ denotes the support of the marginal density of observations $\{Y(s_j): s_j \in \mathcal{C}_i\}$ with locations in conclique $\mathcal{C}_i, i=1, \dots, Q$.
+The full conditionals for the MRF model specify a valid joint distribution $\Pi(\cdot)$ for $(Y(\boldsymbol s_1), \dots, Y(\boldsymbol s_n))$ with support $\mathcal{X} \subset \mathbb{R}^n$. It holds that
+$\mathcal{X} = \mathcal{X}_1 \times \cdots \times \mathcal{X}_Q$ where $\mathcal{X}_i$ denotes the marginal support of observations $\{Y(s_j): s_j \in \mathcal{C}_i\}$ with locations in conclique $\mathcal{C}_i, i=1, \dots, Q$.
 \end{block}
 
 \begin{theorem}
 \label{thm:gibbs_harris}
-Suppose the conclique positivity condition holds. Then the conclique-based Gibbs sampler is Harris ergodic (i.e., $phi$-irreducible, aperiodic and Harris recurrent) with stationary distribution given by the joint data distribution, $\Pi(\cdot)$ and, for any initialization $x\in\mathcal{X}$, the sampler will monotonically converge to $\Pi(\cdot)$ in total variation distance as the number of iterations $m\to \infty$, i.e.,
+Under the conclique positivity condition, the conclique-based Gibbs sampler is Harris ergodic with stationary distribution $\Pi(\cdot)$ and, for any initialization $x\in\mathcal{X}$, the sampler converges monotonically to $\Pi(\cdot)$ in total variation as the number of iterations $m\to \infty$, i.e.,
 $
 \sup_{A \in \mathcal{F}}| P^{(m)}(x,A) -\Pi(A)| \downarrow 0 \text{ as } m \to \infty.
 $
@@ -811,7 +811,7 @@ where $\mathcal{F}$ denotes the $\sigma$-algebra associated with the joint suppo
 
 \begin{theorem}
 \label{thm:2}
-Suppose a MRF model for $\{Y(\boldsymbol s_i): i = 1, \dots, n\}$ admits two concliques and assume the conclique positivity condition holds with $\mathcal{X} = \mathcal{X}_1\times\mathcal{X}_2 \subset \mathbb{R}^n$ (where $\mathcal{X}_i$ denotes the support of observations associated wit conclique $i = 1,2$). Additionally, suppose that either $\mathcal{X}_1$ or $\mathcal{X}_2$ is compact and that the full conditionals are continuous in conditioning variables $\boldsymbol y(\mathcal{N}_i)$, $i = 1, \dots, n$. Then, the conclique-based Gibbs sampler (CGS) is geometrically ergodic with stationary distribution given by the full joint, $\Pi(\cdot)$. 
+Suppose a MRF model for $\{Y(\boldsymbol s_i): i = 1, \dots, n\}$ admits two concliques and the conclique positivity condition holds with $\mathcal{X} = \mathcal{X}_1\times\mathcal{X}_2 \subset \mathbb{R}^n$. If either $\mathcal{X}_1$ or $\mathcal{X}_2$ is compact and the full conditionals are continuous in conditioning variables $\boldsymbol y(\mathcal{N}_i)$, then, the conclique-based Gibbs sampler is geometrically ergodic with stationary distribution given by the joint, $\Pi(\cdot)$. 
 \end{theorem}
 
 Ensures geometric ergodicity of the conclique-based Gibbs sampler for several four-nearest neighbor MRF models including (1) the autologistic binary, (2) the conditional binomial, (3) the conditional Beta, and (4) the Multinomial distributions as well as (5) the windsorized Poisson model of @kaiser1997modeling.
@@ -824,7 +824,7 @@ Geometric ergodicity of the conclique-based Gibbs sampling algorithm can also be
 
 \begin{theorem}
 \label{thm:cases}
-Suppose $\{Y(\boldsymbol s_i): i = 1, \dots, n\}$ with positions on a regular lattice in $\mathbb{R}^2$ follow a MRF model with a exponential family form and a four-nearest neighborhood structure. Then, the conclique-based Gibbs sampler (CGS) is geometrically ergodic for the following cases.
+Suppose $\{Y(\boldsymbol s_i): i = 1, \dots, n\}$, having locations on a regular lattice in $\mathbb{R}^2$, follow a MRF model with a exponential family form and a four-nearest neighborhood structure. Then, the conclique-based Gibbs sampler is geometrically ergodic for the following cases.
 \end{theorem}
 
 # Theoretical results (cont'd)
@@ -1136,7 +1136,7 @@ where $\boldsymbol \theta \in \Theta$ is some \emph{unknown} parameter value
 \end{block}
 
 - @kaiser2012goodness provide a methodology for performing GOF tests using concliques
-- Conclique-based Gibbs sampling allows for fast approximation of the reference distribution for the GOF test statistics in this methodology
+- Conclique-based Gibbs sampling allows for fast approximation of the reference distribution for the GOF test statistics 
 
 # Simple example
 
