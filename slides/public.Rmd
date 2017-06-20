@@ -1337,7 +1337,7 @@ gof_bs_lognormal <- bootstrap_gof(log(lognormal_dat), concliques, neighbors, ini
 \item Simulated one realization of lognormal conditionals on $20\times 20$:\\[.2cm]
   $\log Y(\boldsymbol s_i)$ given neighbors $\{ \boldsymbol s_i + (0,\pm 1), \boldsymbol s_i + (\pm 1, 0) \}$ is normal
   with variance $\tau^2$ and mean $\mu(\boldsymbol s_i) = \alpha + \eta \sum_{\boldsymbol s_j \in \mathcal{N}_i}[\log y(\boldsymbol s_j)-\alpha]$\\[.1cm]
-\item Fit Gaussian MRF \& fit log Gaussian MRF to data $Y(\boldsymbol s_i)$ using pseudo-likelihood
+\item Fit Gaussian MRF \& fit lognormal MRF to data $Y(\boldsymbol s_i)$ using pseudo-likelihood
 \end{itemize}
 \begin{table}
 \footnotesize
