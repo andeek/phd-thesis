@@ -40,7 +40,7 @@ $$
 &*&
 \end{array},
 $$
-with $*$'s above as the positions of neighbors. For a four-nearest neighbor model, the set of maximal concliques has $Q = 2$, as indicated in Figure \ref{fig:conc}. For comparison, an eight-nearest neighbor model will yield a set of maximal concliques containing $Q = 4$ concliques.
+with $*$'s above as the positions of neighbors. For a four-nearest neighbor model, the set of maximal concliques has $Q = 2$, as indicated in Figure \ref{fig:conc}. For comparison, an eight-nearest neighbor model will yield a set of maximal concliques containing $Q = 4$ concliques. \par
 
 
 ```{r concliques, eval=FALSE}
@@ -159,7 +159,7 @@ summary_times <- timings %>%
 
 ```
 
-In this example, the conclique-based Gibbs sampler took $`r round(conc_time, 2)`$ seconds and the sequential-based Gibbs sampler took $`r round(seq_time, 2)`$ seconds $\approx `r round(seq_time/60, 2)`$ minutes to simulate `r comma(num_sample)` spatial data sets of size $20 \times 20$ on a 1.7 GHz processor. As the grid size increases, the time savings become more significant. For $10,000$ iterations/samples on $75 \times 75$ grid, conclique-based took $`r round(summary_times$conclique, 2)`$ seconds and sequential took $`r round(summary_times$sequential, 2)`$ seconds $\approx `r round(summary_times$sequential/(60*60), 2)`$ hours. This is shown in Figure \ref{fig:timings}, which summarizes log times for simulating `r comma(num_sample)` Gaussian MRF data sets on a grid of size $n = m\times m$, for various values of $m$.
+In this example, the conclique-based Gibbs sampler took $`r round(conc_time, 2)`$ seconds and the sequential-based Gibbs sampler took $`r round(seq_time, 2)`$ seconds $\approx `r round(seq_time/60, 2)`$ minutes to simulate `r comma(num_sample)` spatial data sets of size $20 \times 20$ on a 1.7 GHz processor. As the grid size increases, the time savings become more significant. For $10,000$ iterations/samples on $75 \times 75$ grid, conclique-based took $`r round(summary_times$conclique, 2)`$ seconds and sequential took $`r round(summary_times$sequential, 2)`$ seconds $\approx `r round(summary_times$sequential/(60*60), 2)`$ hours. This is shown in Figure \ref{fig:timings}, which summarizes log times for simulating `r comma(num_sample)` Gaussian MRF data sets on a grid of size $n = m\times m$, for various values of $m$. \par
 
 ```{r echo=FALSE}
 make_IminusC_inv <- function(eta, N) {
@@ -368,7 +368,7 @@ For simulating from a Gaussian MRF (e.g., with four-nearest neighbor structure),
 The `conclique` package comes with a function to create a lattice of specified dimension with four-nearest neighbor structure wrapped on a torus (`lattice_4nn_torus`). However, the user can create his or her own dependence structure by creating an `igraph` [@igraph] object with each location as a node and the dependence as the edges. The dimension of the lattice must be kept as an attribute for the object, this is accomplished using
 
 
-```{r, eval=FALSE}
+```{r, eval=FALSE, echo=TRUE}
 igraph::set.graph.attribute(lattice,  "dimvector", dimvec)
 ```
 
@@ -384,7 +384,7 @@ Additionally, the user can specify a different conditional distribution for each
 This function should return a sampled data set of the same size as the original data. For example, the sampler function for the single dependency parameter Gaussian model is reproduced below.
 
 
-```
+```{r, eval=FALSE, echo=TRUE}
 gaussian_single_param_sampler <- function(data, params) {
   rho <- params$rho
   kappa <- params$kappa
@@ -405,7 +405,7 @@ In order to extend `conclique` to use an arbitrary conditional distribution for 
 For example, the cdf function for the single dependency parameter Gaussian model is reproduced below.
 
 
-```{r, eval=FALSE}
+```{r, eval=FALSE, echo=TRUE}
 gaussian_single_param_cdf <- function(data, params) {
   rho <- params$rho
   kappa <- params$kappa

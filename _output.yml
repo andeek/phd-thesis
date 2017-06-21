@@ -10,5 +10,5 @@ bookdown::pdf_book:
     "--variable", "lot=yes",
     "--variable", "colorlinks=yes",
     "--metadata", "link-citations=true",
-    "--chapters"
+    "--top-level-division=chapter"
   ]
