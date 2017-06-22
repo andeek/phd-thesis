@@ -154,7 +154,7 @@ Two models with "deep architecture" that contain multiple hidden layers in addit
     - Stacked RBMs with conditional dependence between neighboring layers.
     - The probability mass function for $X_1, \dots, X_N$ follows from marginalization of the joint pmf
 2. Deep belief network (DBN)
-    - **Similar** to a DBM: Multiple layers of latent random variables stacked in a deep architecture with no conditional dependence between layers 
+    - **Similar** to a DBM: Multiple layers of latent random variables stacked in a deep architecture with no conditional dependence within layers 
     - **Difference**: all but the last stacked layer in a DBN are Bayesian networks [see @pearl985bayesian]
    
 
