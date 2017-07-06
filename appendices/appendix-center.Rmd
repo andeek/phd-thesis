@@ -135,3 +135,32 @@ or $\theta_{h_k}=0$.  As $k \in \{1,\ldots,n\}$ was arbitrary, we have now estab
 
 To establish the equivalence of claims 1 and 2 in Theorem \@ref(thm:two) under the RBM$(m,n,\bm{\theta})$ model, we note that claim 2 again implies claim 3, which then easily implies claim 1. By Theorem \@ref(thm:one), if claim 1 holds then the only possibility for this is $\bm{\theta} = \bm{0} \in \mathbb{R}^{m+n+mn}$. 
 ```
+
+# FLEXIBILITY OF THE RBM MODEL {#appendix-rbm2}
+
+In an RBM model with enough hidden variables, parameter values may be chosen to match any given cell probabilities with arbitrary closeness. Additionally, when one or more of the cell probabilities (\@ref(eq:0)) are zero, the corresponding RBM probabilities may never be identically zero (due to exponential terms in the model) but parameters can be still selected to make the appropriate RBM cell probabilities arbitrarily small. We show this for a model with two visible variables $(V_1,V_2)$ and one hidden $H_1$.
+
+To demonstrate, we assume $p_{(-1,-1)}>0$ (without loss of generality) in the specified cell probabilities (\@ref(eq:0)) and replace parameters $\theta_{11},\theta_{21}$ with $\Delta_1 \equiv \theta_{11} +\theta_{21}$ and $\Delta_2 \equiv \theta_{11} -\theta_{21}$.  We may then prescribe values of $\theta_{v_1}, \theta_{v_2}, \theta_{h_1}, \Delta_1,\Delta_2$  so that the model probability ratio
+$$
+P(V_1=v_1,V_2=v_2|\theta_{v_1}, \theta_{v_2}, \theta_{h_1}, \Delta_1,\Delta_2)/  P(V_1=-1,V_2=-1| \theta_{v_1}, \theta_{v_2}, \theta_{h_1}, \Delta_1,\Delta_2)
+$$
+matches the corresponding ratio $p_{(v_1,v_2)}/p_{(-1,-1)}$ over three values of $(v_1,v_2) = (1,-1),(-1,1),(1,1)$.
+
+For instance, assuming the cell probabilities from (\@ref(eq:0)) are all positive, these probabilities can be exactly reproduced by choosing
+\begin{eqnarray*}
+\theta_{v_1} &=& \frac{1}{2} \log\left( \frac{p_{(1,-1)}}{p_{(-1,-1)}} \frac{\exp(\theta_{h_1}-\Delta_1) + \exp(-\theta_{h_1}+\Delta_1)}{\exp(\theta_{h_1}+\Delta_2) + \exp(-\theta_{h_1}-\Delta_2)}  \right),\\ 
+\theta_{v_2}&= &\frac{1}{2} \log\left( \frac{p_{(-1,1)}}{p_{(-1,-1)}} \frac{\exp(\theta_{h_1}-\Delta_1) + \exp(-\theta_{h_1}+\Delta_1)}{\exp(\theta_{h_1}-\Delta_2) + \exp(-\theta_{h_1}+\Delta_2)}  \right)
+\end{eqnarray*}
+and selecting $\theta_{h_1}, \Delta_1,\Delta_2$ to solve
+\begin{equation}
+(\#eq:1)
+\frac{p_{(1,1)}p_{(-1,-1)}}{p_{(-1,1)}p_{(1,-1)}} = \frac{\ell(|\theta_{h_1}|) + \ell(|\Delta_1|) }{\ell(|\theta_{h_1}|) + \ell(|\Delta_2|)},
+\end{equation}
+based on a monotonically increasing function $\ell(x)\equiv \exp(-2x)+\exp(2x)$, $x \geq 0$. If  $[p_{(1,1)}p_{(-1,-1)}]/ [p_{(-1,1)}p_{(1,-1)}] \geq 1$, one can pick any values for $\theta_{h_1}, \Delta_2\in \mathbb{R}$ and solve (\@ref(eq:1)) for $|\Delta_1|$; likewise, when $[p_{(1,1)}p_{(-1,-1)}]/ [p_{(-1,1)}p_{(1,-1)}] < 1$ in (\@ref(eq:1))}), one may solve for $|\Delta_2|$ upon choosing any values for $\theta_{h_1}, \Delta_1\in \mathbb{R}$. 
+  
+Alternatively, if exactly one specified cell probability in (\@ref(eq:0)) is zero, say $p_{(1,1)}$ (without loss of generality), we can select parameters $\theta_{v_1},\theta_{v_2}$ as above based on a sequence $(\theta_{h_1}, \Delta_{1}, \Delta_{2}) \equiv (\theta_{h_1}^{(m)}, \Delta_{1}^{(m)}, \Delta_{2}^{(m)})$, $m\in\{1,2,\ldots,\}$ of the remaining parameter values such that $\lim_{m\to \infty}|\Delta_{1}^{(m)}| = \infty$ and $\lim_{m\to \infty}  (|\theta_{h_1}^{(m)}| + |\Delta_{2}^{(m)}|)/|\Delta_{1}^{(m)}|=0$ hold. This guarantees that the resulting RBM model matches the given cell probabilities (\@ref(eq:0)) in the limit:
+\begin{equation}
+(\#eq:2)
+\lim_{m\to \infty}P(V_1=v_1,V_2=v_2| \theta_{v_1}, \theta_{v_2}, \theta_{h_1},\Delta_1,\Delta_2) = p_{(v_1,v_2)},\quad (v_1,v_2)\in\{(\pm 1,\pm 1)\}.
+\end{equation}  
+If exactly two specified probabilities in (\@ref(eq:0)) are zero, say  $p_{(1,1)}$ and $p_{(-1,1)}$ (without loss of generality), then a limit approximation as in (\@ref(eq:2)) follows by picking $\theta_{v_1}$ as above based on any choices of $(\theta_{h_1}, \Delta_1,\Delta_2)$ and choosing  a sequence of $\theta_{v_2}\equiv \theta_{v_2}^{(m)}$ values for which $\theta_{v_2}^{({m})} \rightarrow -\infty$.
