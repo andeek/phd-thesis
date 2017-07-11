@@ -14,11 +14,11 @@ github-repo: andeek/phd-thesis
 dedicate: true
 degree: DOCTOR OF PHILOSOPHY
 level: doctoral
-formal: dissertation
+format: dissertation
 major: Statistics
 mprof: "Daniel Nordman"
 member:
-  - Stephen Vardeman, Major Professor
+  - Stephen Vardeman, Co-major Professor
   - Kris De Brabanter
   - Mark Kaiser
   - Daniel Nettleton

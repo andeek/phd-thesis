@@ -133,6 +133,8 @@ Pseudo-likelihood again yields parameter estimates $\widehat{\boldsymbol \theta}
 
 \begin{table}[ht!]
 \centering
+\caption{Full conditional distributions of three binary MRF models for the endive data.}
+\label{tab:natural-params}
 \begin{tabular}{| p{2in} | p{4.5in} |}
 \hline
 Model &  Natural parameter function\\
@@ -142,8 +144,6 @@ Model &  Natural parameter function\\
 (c) Centered autologistic model as in (b) with scale parameter $\kappa_i$ determined by logistic regression ($\beta_0,\beta_1\in\mathbb{R}$) on the horizontal coordinate $u_i$ of location $\boldsymbol s_i=(u_i,v_i)$ & {\begin{align*} A_i\{\boldsymbol y(\mathcal{N}_i)\} &= \log\left(\frac{\kappa_i}{1-\kappa_i}\right) + \eta_u\sum\limits_{\boldsymbol s_j \in N_{u,i}}\{y(\boldsymbol s_j) - \kappa_i\} + \eta_v\sum\limits_{\boldsymbol s_j \in N_{v,i}}\{y(\boldsymbol s_j) - \kappa_i\}, \\ \log\left(\frac{\kappa_i}{1-\kappa_i}\right) &= \beta_0 + \beta_1 u_i \end{align*}} \\
 \hline
 \end{tabular}
-\caption{Full conditional distributions of three binary MRF models for the endive data.}
-\label{tab:natural-params}
 \end{table}
 
 ```{r endive-model-setup, cache=TRUE}
@@ -459,7 +459,7 @@ addtorow <- list()
 addtorow$pos <- list(-1)
 addtorow$command <- "\\hline &\\multicolumn{2}{|c|}{Model (a)} & \\multicolumn{3}{|c|}{Model (b)} & \\multicolumn{4}{|c|}{Model (c)} \\\\\n"
   
-print(endive_table, add.to.row = addtorow, sanitize.text.function = function(x){x}, comment = FALSE)
+print(endive_table, add.to.row = addtorow, sanitize.text.function = function(x){x}, comment = FALSE, caption.placement = "top")
 
 ```
 
@@ -528,6 +528,8 @@ As another example of MRF model-based simulation in inference, we also consider 
 
 \begin{table}
 \centering
+\caption{Bootstrap p-values for a goodness-of-fit (GOF) assessment of the three centered autologistic models with four-nearest neighbor structure, (a) the isotropic model with one dependence parameter, (b) the model with two dependence parameters, and (c) the model with two dependence parameters and a marginal mean structure based on the regression on the horizontal location component, $u_i$, fit to the endive data.}
+\label{tab:endive-p-values}
 \begin{tabular}{|l|rrr|}
 \hline
 & Model (a) & Model (b) & Model (c) \\
@@ -535,8 +537,6 @@ As another example of MRF model-based simulation in inference, we also consider 
 p-value & $`r round(p_value_one_param, 3)`$ & $`r round(p_value_two_param, 3)`$ & $`r round(p_value_two_param_reg, 3)`$ \\
 \hline
 \end{tabular}
-\caption{Bootstrap p-values for a goodness-of-fit (GOF) assessment of the three centered autologistic models with four-nearest neighbor structure, (a) the isotropic model with one dependence parameter, (b) the model with two dependence parameters, and (c) the model with two dependence parameters and a marginal mean structure based on the regression on the horizontal location component, $u_i$, fit to the endive data.}
-\label{tab:endive-p-values}
 \end{table}
 
 
@@ -839,6 +839,8 @@ For illustration, we first consider the two metrics $A$ and $C$ for the three sp
 
 \begin{table}[ht]
 \centering
+\caption{Measures of algorithmic and computational efficiency, $A$ and $C$, for three autologistic models presented in Section \ref{illustrative-example} on a $`r N` \times `r N`$ grid. We compare the metrics for a conclique-based Gibbs sampler and a sequential sampler.}
+\label{tab:eff-results}
 \begin{tabular}{|l|rr|rr|rr|}
 \hline
 Gibbs algorithm & \multicolumn{2}{|c|}{Model (a)} & \multicolumn{2}{|c|}{Model (b)} & \multicolumn{2}{|c|}{Model (c)} \\
@@ -849,8 +851,6 @@ Conclique & $`r round(mean(algo_eff$conc$m0), 5)`$ & $`r round(mean(times_conc_m
 Sequential & $`r round(mean(algo_eff$seq$m0), 5)`$ & $`r round(mean(times_seq_m0)*ncol(samp_conc_m0), 5)`$ & $`r round(mean(algo_eff$seq$m1), 5)`$ & $`r round(mean(times_seq_m1)*ncol(samp_conc_m0), 5)`$ & $`r round(mean(algo_eff$seq$m2), 5)`$ & $`r round(mean(times_seq_m2)*ncol(samp_conc_m0), 5)`$ \\
 \hline
 \end{tabular}
-\caption{Measures of algorithmic and computational efficiency, $A$ and $C$, for three autologistic models presented in Section \ref{illustrative-example} on a $`r N` \times `r N`$ grid. We compare the metrics for a conclique-based Gibbs sampler and a sequential sampler.}
-\label{tab:eff-results}
 \end{table}
 
 Table \ref{tab:eff-results} indicates that, as the models become more complex (more parameters), their algorithmic or mixing efficiency is slightly decreased and the computational complexity remains similar. In other words, to achieve the same number of effective draws from the target joint data distribution, more iterations become necessary as the underlying model becomes slightly more complex, though the computational demands per Gibbs iteration are relatively unchanged for these models. However, comparing the conclique-based to the sequential-based samplers, the conclique-based is at least `r round(min(c((mean(times_seq_m0)*ncol(samp_conc_m0))/(mean(times_conc_m0)*length(conclique)), (mean(times_seq_m1)*ncol(samp_conc_m1))/(mean(times_conc_m1)*length(conclique)), (mean(times_seq_m2)*ncol(samp_conc_m2))/(mean(times_conc_m2)*length(conclique)))), 0)` times faster than the sequential-based sampler in any model case here. This example suggests that the algorithmic/mixing efficiencies of both conclique-based and sequential Gibbs samplers are often similar, which is true for the models and sample sizes considered in Table \ref{tab:eff-results} as well as for all other MRF models and grid sizes encountered in our investigations. Nevertheless, the actual time savings of the conclique-based sampler over the sequential Gibbs can be quite substantial, where the computational benefits can greatly increase as the desired number of MCMC iterations grows. The latter is relevant to enhancing the effective MCMC sample size when simulating data from MRF models of increasing complexity.

@@ -273,7 +273,7 @@ conclique_gof_err <- gof_statistics(conclique_resids_err, concliques, "ks", "max
 ```{r gof_table, echo=FALSE, results='asis'}
 data.frame(True = conclique_gof, Incorrect = conclique_gof_err) %>%
   xtable(caption="The test statistic, maximum of KS statistics, calculated using residuals from both correct and incorrect models.", label = "tab:gof_table") %>%
-  print(include.rownames = FALSE, comment = FALSE)
+  print(include.rownames = FALSE, comment = FALSE, caption.placement = "top")
 ```
 
 We can see that the incorrectly specified model has a higher value of the statistic, which points to potentially rejecting this model. However, without a reference distribution, the meaning behind the size of a test statistic becomes impossible to judge. To this end, we have the ability to generate spatial data from a model using our conclique-based Gibbs simulation functions in `conclique` and thereby simulate (or parametrically bootstrap) a reference distribution for conclique-based test statistics.
@@ -333,7 +333,7 @@ data.frame(eta = mple$eta,
          `$\\hat{\\kappa}$` = kappa,
          `$\\hat{\\rho}^2$` = rho) %>%
   xtable(caption = "\\label{tab:ests}Maximum pseudo-likelihood estimates for $\\eta, \\kappa,$ and $\\rho^2$ for data realized from a four-nearest neighbor Gaussian MRF with $\\rho^2 = 2, \\kappa = 10, \\eta = .24$.") %>%
-  print(include.rownames = FALSE, sanitize.text.function = function(x) x, comment = FALSE)
+  print(include.rownames = FALSE, sanitize.text.function = function(x) x, comment = FALSE, caption.placement = "top")
 ```
 
 ```{r log-normal, echo = FALSE}

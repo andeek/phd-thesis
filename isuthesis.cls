@@ -542,7 +542,7 @@
 \def\format#1{\gdef\@format{#1}}            \format{thesis}
 \def\level#1{\gdef\@level{#1}}              \level{Master's}
 \def\degree#1{\gdef\@degree{#1}}            \degree{MASTER OF ARTS}
-\def\mprof#1{\gdef\@mprof{#1, Major Professor}} \def\@mprof{}
+\def\mprof#1{\gdef\@mprof{#1, Co-major Professor}} \def\@mprof{}
 \def\submit#1{\gdef\@submit{#1}}            \submit{the graduate faculty}
 
 \newcount\@deptnum  \@deptnum=1
@@ -723,12 +723,12 @@ For the Major Program\fi\fi}
    \@major
 %   \@minor                     % No longer listed - Sept. 2001
    \vskip 41pt                    % Changed from 14pt to more evenly space page (JAS11)
-  % \begin{singlespace}  % Elminated to more evenly space page (JAS11)
+   \begin{singlespace}  % Elminated to more evenly space page (JAS11)
    Program of Study Committee: \\
    \@mprof 
    \@mprofs
    \@members
-   %\end{singlespace}   % Eliminated to more evenly space page (JAS11)
+   \end{singlespace}   % Eliminated to more evenly space page (JAS11)
    \end{center}
    \vfill
    \vspace{14pt}

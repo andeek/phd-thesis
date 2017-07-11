@@ -337,6 +337,12 @@ $endfor$
 }
 %%%%%%%
 
+%% fix lot and lof
+\usepackage[subfigure]{tocloft}
+
+\renewcommand{\cftfigfont}{Figure }
+\renewcommand{\cfttabfont}{Table }
+
 \begin{document}
 
 $if(title)$
@@ -367,11 +373,17 @@ $endif$
 $if(lot)$
 \addtocontents{toc}{\def\protect\@chapapp{}} 
 \cleardoublepage \phantomsection \addcontentsline{toc}{chapter}{LIST OF TABLES}
+\bgroup
+\hypersetup{linkcolor = black}
 \listoftables
+\egroup
 $endif$
 $if(lof)$
 \cleardoublepage \phantomsection \addcontentsline{toc}{chapter}{LIST OF FIGURES}
+\bgroup
+\hypersetup{linkcolor = black}
 \listoffigures
+\egroup
 $endif$
 
 \addtocontents{toc}{\def\protect\@chapapp{CHAPTER\ }}

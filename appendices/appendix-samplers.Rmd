@@ -32,6 +32,8 @@ Each of the three Gibbs sampling techniques (including CGS) has a corresponding 
 
 \begin{table}[H]
 \centering
+\caption{The transition densities for each of the three Gibbs sampling techniques, CGS, RQGS, and RSGS, where $\mathbb{I}(\cdot)$ is the indicator function and $\boldsymbol x_{-i} = \{\boldsymbol x_j, j \not=i\}$.}
+\label{tab:densities}
 \begin{tabular}{| l | l |}
 \hline
 Sampling Technique & Transition Density \\
@@ -41,6 +43,4 @@ RQGS & $k_{RQGS}(\boldsymbol x, \boldsymbol y) = \sum\limits_{i = 1}^{Q!} q_i f(
 RSGS & $k_{RSGS}(\boldsymbol x, \boldsymbol y) = \sum\limits_{i = 1}^Q p_i f(\boldsymbol y_i|\boldsymbol x_{-i}) \mathbb{I}(\boldsymbol x_{-i} = \boldsymbol y_{-i})$\\
 \hline
 \end{tabular}
-\caption{The transition densities for each of the three Gibbs sampling techniques, CGS, RQGS, and RSGS, where $\mathbb{I}(\cdot)$ is the indicator function and $\boldsymbol x_{-i} = \{\boldsymbol x_j, j \not=i\}$.}
-\label{tab:densities}
 \end{table}
