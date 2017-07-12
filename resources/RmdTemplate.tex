@@ -91,7 +91,7 @@ $if(colorlinks)$
             colorlinks=true,
             linkcolor=$if(linkcolor)$$linkcolor$$else$Black$endif$,
             citecolor=$if(citecolor)$$citecolor$$else$Black$endif$,
-            urlcolor=$if(urlcolor)$$urlcolor$$else$Blue$endif$,
+            urlcolor=$if(urlcolor)$$urlcolor$$else$Black$endif$,
 $else$
             pdfborder={0 0 0},
 $endif$
@@ -256,10 +256,6 @@ $if(dir)$
 \fi
 $endif$
 
-% stuff from eric
-\hypersetup{colorlinks=true,linkcolor=blue,anchorcolor=blue,citecolor=blue,filecolor=blue,urlcolor=blue,bookmarksnumbered=true,pdfview=FitB}
-\newgeometry{letterpaper, left=1.25in, top=0.55in, right=1.02in, bottom=1in, includehead=true}
-
 %%% Use protect on footnotes to avoid problems with footnotes in titles
 \let\rmarkdownfootnote\footnote%
 \def\footnote{\protect\rmarkdownfootnote}
@@ -302,6 +298,9 @@ $endif$
 $if(mprof)$
 \mprof{$mprof$}
 $endif$
+$if(mprofs)$
+\mprofs$for(mprofs)${$mprofs$}$endfor$
+$endif$
 $if(member)$
 \members{$for(member)$$member$$sep$ \\ $endfor$}
 $endif$
@@ -329,19 +328,17 @@ $endfor$
 \NewEnviron{paperauthor_}{%
   \paperauthor{\BODY}
   }
+
   
 \let\oldappendix\appendix
 \renewcommand{\appendix}{
-\appendixtitle 
+\appendixtitle
 \oldappendix
+\addtocontents{toc}{% NB!!! must be inside the first \include
+    \protect\renewcommand\protect\cftchappresnum{\appendixname~}%
+    \protect\setlength{\cftchapnumwidth}{\mylenapp}}%
 }
 %%%%%%%
-
-%% fix lot and lof
-\usepackage[subfigure]{tocloft}
-
-\renewcommand{\cftfigfont}{Figure }
-\renewcommand{\cfttabfont}{Table }
 
 \begin{document}
 
@@ -372,18 +369,12 @@ $endif$
 
 $if(lot)$
 \addtocontents{toc}{\def\protect\@chapapp{}} 
-\cleardoublepage \phantomsection \addcontentsline{toc}{chapter}{LIST OF TABLES}
-\bgroup
-\hypersetup{linkcolor = black}
+\addcontentsline{toc}{chapter}{LIST OF TABLES}
 \listoftables
-\egroup
 $endif$
 $if(lof)$
 \cleardoublepage \phantomsection \addcontentsline{toc}{chapter}{LIST OF FIGURES}
-\bgroup
-\hypersetup{linkcolor = black}
 \listoffigures
-\egroup
 $endif$
 
 \addtocontents{toc}{\def\protect\@chapapp{CHAPTER\ }}
@@ -391,7 +382,6 @@ $endif$
 \cleardoublepage \phantomsection 
 \include{preface/acknowl}
 
-%\addtocontents{toc}{\def\protect\@chapapp{CHAPTER\ }}
 
 $if(abstract)$
 \specialchapt{ABSTRACT}
@@ -405,32 +395,14 @@ $endif$
 
 $body$
 
-% For some reason this is broken
-% $if(natbib)$
-% $if(bibliography)$
-% \renewcommand\bibname{\centerline{BIBLIOGRAPHY}}
-% \unappendixtitle
-% \newpage
-% \phantomsection
-% \addcontentsline{toc}{chapter}{BIBLIOGRAPHY}
-% \bibliography{$for(bibliography)$$bibliography$$sep$,$endfor$}
-% $endif$
-% $else$
-% $if(biblatex)$
-% \printbibliography$if(biblio-title)$[title=$biblio-title$]$endif$
-% $else$
-
 
 % redefine hypertarget command to add a line break after the target
 % needed to avoid overfull vbox (which leads to incorrect page breaking)
 \let\oldhypertarget\hypertarget
 \renewcommand{\hypertarget}[2]{\oldhypertarget{#1}{#2}~\\[0in]}
-$endif$
-$endif$
 
 $for(include-after)$
 $include-after$
-
 $endfor$
 
 \end{document}

@@ -16,9 +16,10 @@ degree: DOCTOR OF PHILOSOPHY
 level: doctoral
 format: dissertation
 major: Statistics
-mprof: "Daniel Nordman"
+mprofs: 
+  - Daniel Nordman
+  - Stephen Vardeman
 member:
-  - Stephen Vardeman, Co-major Professor
   - Kris De Brabanter
   - Mark Kaiser
   - Daniel Nettleton
